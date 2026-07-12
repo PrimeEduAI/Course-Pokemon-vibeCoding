@@ -1301,3 +1301,13 @@ git add -A && git commit -m "feat(m2): scan ui + collection count"
 
 - **Plan 2（M3）**：對戰系統 — AI 狀態機、@smogon/calc 傷害層、招式 hitbox、HUD、Gen 8 宮門體育場
 - **Plan 3（M4+M5）**：寶可夢中心收藏館、畫風切換（pixel ↔ modern）、Gen 1 石英高原
+
+## M3 前置待辦（M1 code review 累積，刻意延後）
+
+來自 Task 4 品質審查（詳見審查紀錄），開 M3 時優先處理：
+1. 相機邏輯從 Player.useFrame 抽成 `useFollowCamera` hook（M3 戰鬥鏡頭會改寫）
+2. 對手 dexId 動態化時加 `useGLTF.preload`，避免 Suspense pop-in
+3. `camTarget` 模組級 Vector3 改 useRef（雙實例安全）
+4. SPEED/lerp/鏡頭偏移等 magic numbers 收斂成 tunables 物件
+5. 視覺高度 1.2 vs 膠囊高度 2.0 不一致 — M3 調 hitbox 時對齊
+6. lib/showdown-name.ts 的 combining-mark regex 改 `̀-ͯ` 寫法（防編輯器 renormalize）
