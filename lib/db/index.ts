@@ -49,9 +49,9 @@ export function createDb(path: string): Db {
   return drizzle(sqlite, { schema }) as Db
 }
 
-let _db: Db | null = null
-/** App 單例（route handlers 用） */
+const g = globalThis as unknown as { __pokeArenaDb?: Db }
+/** App 單例（route handlers 用），掛在 globalThis 上避免 Next dev hot-reload 重建連線 */
 export function getDb() {
-  if (!_db) _db = createDb('data/collection.db')
-  return _db
+  if (!g.__pokeArenaDb) g.__pokeArenaDb = createDb('data/collection.db')
+  return g.__pokeArenaDb
 }
