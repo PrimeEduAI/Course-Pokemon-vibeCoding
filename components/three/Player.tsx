@@ -13,11 +13,11 @@ const camTarget = new Vector3()
 export default function Player({ dexId }: { dexId: number }) {
   const body = useRef<RapierRigidBody>(null)
   const visual = useRef<Group>(null)
-  const [, getKeys] = useKeyboardControls()
+  const [, getKeys] = useKeyboardControls<keyof KeyState>()
 
   useFrame(({ camera }) => {
     if (!body.current) return
-    const [x, z] = dirFromKeys(getKeys() as unknown as KeyState)
+    const [x, z] = dirFromKeys(getKeys())
     const vel = body.current.linvel()
     body.current.setLinvel({ x: x * SPEED, y: vel.y, z: z * SPEED }, true)
     // 面向移動方向
@@ -35,8 +35,8 @@ export default function Player({ dexId }: { dexId: number }) {
     <RigidBody ref={body} colliders={false} lockRotations position={[0, 1, 6]}>
       <CapsuleCollider args={[0.5, 0.5]} />
       <group ref={visual}>
-        <group position={[0, -0.12, -0.73]}>
-          <PokemonModel dexId={dexId} scale={0.568} />
+        <group position={[0, -1, 0]}>
+          <PokemonModel dexId={dexId} />
         </group>
       </group>
     </RigidBody>
