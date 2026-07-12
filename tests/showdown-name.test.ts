@@ -7,3 +7,9 @@ test('lowercases and strips punctuation', () => {
   expect(toShowdownId('nidoran-f')).toBe('nidoranf')
   expect(toShowdownId('Pikachu')).toBe('pikachu')
 })
+
+test('handles gender symbols and diacritics', () => {
+  expect(toShowdownId('Nidoran♀')).toBe('nidoranf')
+  expect(toShowdownId('Nidoran♂')).toBe('nidoranm')
+  expect(toShowdownId('Flabébé')).toBe('flabebe')
+})
