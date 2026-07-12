@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS price_snapshots (
 CREATE TABLE IF NOT EXISTS pokemon_cache (
   dex_id INTEGER PRIMARY KEY, name TEXT NOT NULL,
   stats_json TEXT NOT NULL, moves_json TEXT NOT NULL, cry_url TEXT
-);`
+);
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_card_id ON price_snapshots(card_id);`
 
 export type Db = BaseSQLiteDatabase<'sync', unknown, typeof schema>
 
