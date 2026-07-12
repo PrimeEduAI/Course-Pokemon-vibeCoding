@@ -26,9 +26,9 @@ export default function Player({ dexId }: { dexId: number }) {
     }
     // 鏡頭跟隨
     const p = body.current.translation()
-    camTarget.set(p.x, p.y + 5, p.z + 10)
+    camTarget.set(p.x, p.y + 3.1, p.z + 7.6)
     camera.position.lerp(camTarget, 0.08)
-    camera.lookAt(p.x, p.y + 1, p.z)
+    camera.lookAt(p.x, p.y + 2.3, p.z)
   })
 
   return (
@@ -36,7 +36,7 @@ export default function Player({ dexId }: { dexId: number }) {
       <CapsuleCollider args={[0.5, 0.5]} />
       <group ref={visual}>
         <group position={[0, -1, 0]}>
-          <PokemonModel dexId={dexId} />
+          <PokemonModel dexId={dexId} targetHeight={1.45} />
         </group>
       </group>
     </RigidBody>

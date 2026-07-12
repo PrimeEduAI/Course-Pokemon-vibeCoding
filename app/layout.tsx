@@ -1,6 +1,9 @@
 import './globals.css'
 
-export const metadata = { title: 'Pokémon 3D Arena' }
+export const metadata = {
+  title: 'Pokémon 3D Arena — League Edition',
+  description: '掃描 · 收藏 · 對戰。打造專屬你的傳說隊伍，登上聯盟頂點。',
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
