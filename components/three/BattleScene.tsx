@@ -19,7 +19,11 @@ export default function BattleScene() {
       <Canvas shadows camera={{ position: [0, 6, 12], fov: 50 }}>
         <Suspense fallback={null}>
           <Environment files="/assets/hdri/venice_sunset_2k.hdr" background />
-          <directionalLight position={[8, 12, 6]} intensity={1.2} castShadow />
+          <directionalLight position={[8, 12, 6]} intensity={1.2} castShadow
+            shadow-mapSize={[2048, 2048]}
+            shadow-camera-left={-22} shadow-camera-right={22}
+            shadow-camera-top={14} shadow-camera-bottom={-14}
+            shadow-camera-far={40} />
           <ambientLight intensity={0.3} />
           <Physics>
             <ArenaFloor />
