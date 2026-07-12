@@ -22,7 +22,7 @@ export default function BattleScene() {
           <directionalLight position={[16, 24, 12]} intensity={1.2} castShadow
             shadow-mapSize={[2048, 2048]}
             shadow-camera-left={-22} shadow-camera-right={22}
-            shadow-camera-top={14} shadow-camera-bottom={-14}
+            shadow-camera-top={19} shadow-camera-bottom={-19}
             shadow-camera-far={40} />
           <ambientLight intensity={0.3} />
           <Physics>
