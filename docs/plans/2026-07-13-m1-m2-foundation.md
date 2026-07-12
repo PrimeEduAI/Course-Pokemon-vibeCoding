@@ -1302,6 +1302,14 @@ git add -A && git commit -m "feat(m2): scan ui + collection count"
 - **Plan 2（M3）**：對戰系統 — AI 狀態機、@smogon/calc 傷害層、招式 hitbox、HUD、Gen 8 宮門體育場
 - **Plan 3（M4+M5）**：寶可夢中心收藏館、畫風切換（pixel ↔ modern）、Gen 1 石英高原
 
+## 執行期核准的計畫偏差（審查追認紀錄）
+
+- Task 1：typescript 鎖 5.x（TS 7 與 Next 15 不相容）
+- Task 3/4 修復：ArenaFloor 顯式 CuboidCollider、陰影視錐 ±22/±19、光源 [16,24,12]、GLB SkeletonUtils.clone + Box3 自動歸一化（取代固定 scale/offset）
+- Task 5：雙 driver createDb（Bun 測試走 bun:sqlite、Next/Node 走 better-sqlite3，createRequire 繞過 bundler）
+- Task 6 修復：searchCards 逐筆 safeParse、buildCardQuery 去除雙引號、錯誤含 statusText
+- Task 7/8 修復：vision max_tokens 300→500、refusal/空回應明確拋錯、JSON.parse 錯誤含前 80 字元上下文；tsconfig 補 @types/bun
+
 ## M3 前置待辦（M1 code review 累積，刻意延後）
 
 來自 Task 4 品質審查（詳見審查紀錄），開 M3 時優先處理：
