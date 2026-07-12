@@ -6,6 +6,11 @@ import type { CachedPokemon } from './pokeapi'
 
 type PokemonFetcher = (dexId: number) => Promise<CachedPokemon>
 
+/** photoPath 只接受掃卡 route 產生的固定格式，防 path traversal（M4 會拿它去 serve 檔案） */
+export function isValidPhotoPath(p: unknown): p is string {
+  return typeof p === 'string' && /^data\/photos\/\d+\.(jpe?g|png|webp)$/.test(p)
+}
+
 export async function addCard(db: Db, card: TcgCard, photoPath: string | null, getPokemon: PokemonFetcher) {
   const inserted = db.transaction((tx) => {
     const row = tx.insert(cards).values({

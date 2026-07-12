@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import { createDb } from '../lib/db'
 import { cards, pokemonCache, priceSnapshots } from '../lib/db/schema'
-import { addCard, listCards } from '../lib/collection'
+import { addCard, isValidPhotoPath, listCards } from '../lib/collection'
 import type { TcgCard } from '../lib/tcg'
 
 const tcgCard: TcgCard = {
@@ -33,4 +33,16 @@ test('listCards returns latest price per card', async () => {
   const list = listCards(db)
   expect(list[0].name).toBe('Pikachu')
   expect(list[0].latestPrice).toBe(1.2)
+})
+
+test('isValidPhotoPath accepts only canonical data/photos paths', () => {
+  expect(isValidPhotoPath('data/photos/123.jpg')).toBe(true)
+  expect(isValidPhotoPath('data/photos/123.jpeg')).toBe(true)
+  expect(isValidPhotoPath('data/photos/123.png')).toBe(true)
+  expect(isValidPhotoPath('data/photos/123.webp')).toBe(true)
+  expect(isValidPhotoPath('../../etc/passwd')).toBe(false)
+  expect(isValidPhotoPath('data/photos/1.jpg/../x')).toBe(false)
+  expect(isValidPhotoPath('data/photos/../1.jpg')).toBe(false)
+  expect(isValidPhotoPath('/data/photos/1.jpg')).toBe(false)
+  expect(isValidPhotoPath(null)).toBe(false)
 })

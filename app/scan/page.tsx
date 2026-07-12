@@ -12,7 +12,11 @@ export default function ScanPage() {
   const [message, setMessage] = useState('')
 
   async function onFile(file: File) {
-    setPreview(URL.createObjectURL(file))
+    const url = URL.createObjectURL(file)
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return url
+    })
     setResult(null); setMessage(''); setBusy(true)
     const fd = new FormData()
     fd.append('photo', file)
@@ -40,7 +44,7 @@ export default function ScanPage() {
     <main style={{ padding: 40, maxWidth: 900 }}>
       <h1>📷 拍卡入庫</h1>
       <p style={{ margin: '12px 0' }}>
-        <input type="file" accept="image/*" capture="environment"
+        <input type="file" accept="image/*" capture="environment" disabled={busy}
           onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
       </p>
       {preview && <img src={preview} alt="preview" style={{ maxWidth: 260, borderRadius: 8 }} />}
@@ -54,7 +58,7 @@ export default function ScanPage() {
               <p><b>{c.name}</b> {c.validated && '✓'}</p>
               <p>{c.setName} · {c.number}/{c.printedTotal}</p>
               <p>{c.price?.market != null ? `市價 US$${c.price.market}` : '無市價資料'}</p>
-              <button onClick={() => save(c)} style={{ marginTop: 8, padding: '6px 12px' }}>加入收藏</button>
+              <button onClick={() => save(c)} disabled={busy} style={{ marginTop: 8, padding: '6px 12px' }}>加入收藏</button>
             </div>
           ))}
         </div>

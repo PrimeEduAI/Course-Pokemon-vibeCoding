@@ -1309,6 +1309,7 @@ git add -A && git commit -m "feat(m2): scan ui + collection count"
 - Task 5：雙 driver createDb（Bun 測試走 bun:sqlite、Next/Node 走 better-sqlite3，createRequire 繞過 bundler）
 - Task 6 修復：searchCards 逐筆 safeParse、buildCardQuery 去除雙引號、錯誤含 statusText
 - Task 7/8 修復：vision max_tokens 300→500、refusal/空回應明確拋錯、JSON.parse 錯誤含前 80 字元上下文；tsconfig 補 @types/bun
+- Task 10/11 修復：card+snapshot 交易化、getDb 掛 globalThis、pokemonCache miss 加 warn、photoPath 格式驗證（防路徑穿越）、首頁 force-dynamic、掃卡頁 busy 鎖定與 objectURL 回收
 
 ## M3 前置待辦（M1 code review 累積，刻意延後）
 
