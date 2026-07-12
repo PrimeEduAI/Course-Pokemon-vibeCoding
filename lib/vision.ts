@@ -13,7 +13,13 @@ export function parseVisionResponse(text: string): CardHint {
   const start = stripped.indexOf('{')
   const end = stripped.lastIndexOf('}')
   if (start === -1 || end === -1) throw new Error(`vision response has no JSON: ${text.slice(0, 80)}`)
-  return VisionCard.parse(JSON.parse(stripped.slice(start, end + 1)))
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(stripped.slice(start, end + 1))
+  } catch {
+    throw new Error(`vision response has invalid JSON: ${text.slice(0, 80)}`)
+  }
+  return VisionCard.parse(parsed)
 }
 
 const PROMPT = `你看到的是一張寶可夢集換式卡牌的照片。請讀出：
@@ -30,7 +36,7 @@ export async function extractCardInfo(
   const anthropic = client ?? new Anthropic()
   const msg = await anthropic.messages.create({
     model: 'claude-sonnet-5',
-    max_tokens: 300,
+    max_tokens: 500,
     messages: [{
       role: 'user',
       content: [
@@ -39,6 +45,8 @@ export async function extractCardInfo(
       ],
     }],
   })
+  if (msg.stop_reason === 'refusal') throw new Error('vision refused to read the image')
   const text = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
+  if (!text) throw new Error(`vision returned no text (stop_reason: ${msg.stop_reason})`)
   return parseVisionResponse(text)
 }
