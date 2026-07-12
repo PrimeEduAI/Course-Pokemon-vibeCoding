@@ -7,6 +7,11 @@ test('buildCardQuery composes name/number/printedTotal, strips leading zeros', (
   expect(buildCardQuery({ name: 'Mew ex', number: null, printedTotal: null })).toBe('name:"Mew ex"')
 })
 
+test('buildCardQuery strips stray quotes from name', () => {
+  expect(buildCardQuery({ name: 'Char"izard', number: null, printedTotal: null }))
+    .toBe('name:"Charizard"')
+})
+
 test('pickPrice prefers holofoil market, falls back to any variant', () => {
   expect(pickPrice({ holofoil: { market: 12.3, low: 8, mid: 11, high: 20 } }))
     .toEqual({ market: 12.3, low: 8, mid: 11, high: 20, variant: 'holofoil' })
@@ -31,4 +36,25 @@ test('searchCards calls v2 endpoint with encoded q and maps cards', async () => 
   expect(cards[0].name).toBe('Pikachu')
   expect(cards[0].pokedexNumbers).toEqual([25])
   expect(cards[0].price?.market).toBe(1.2)
+})
+
+test('searchCards drops malformed cards instead of failing the whole result', async () => {
+  const fakeFetch = (async () => {
+    return new Response(JSON.stringify({ data: [
+      {
+        id: 'base1-58', name: 'Pikachu', number: '58', rarity: 'Common',
+        set: { id: 'base1', name: 'Base', printedTotal: 102 },
+        images: { small: 's.png', large: 'l.png' },
+        nationalPokedexNumbers: [25],
+      },
+      {
+        id: 'base1-4', name: 'Charizard', number: '4', rarity: 'Rare Holo',
+        set: { id: 'base1', name: 'Base', printedTotal: 102 },
+        // missing images -> invalid
+      },
+    ] }))
+  }) as unknown as typeof fetch
+  const cards = await searchCards('name:"Pikachu"', { fetcher: fakeFetch })
+  expect(cards).toHaveLength(1)
+  expect(cards[0].id).toBe('base1-58')
 })

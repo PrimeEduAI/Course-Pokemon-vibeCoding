@@ -3,7 +3,8 @@ import { z } from 'zod'
 export interface CardHint { name: string; number: string | null; printedTotal: string | null }
 
 export function buildCardQuery(h: CardHint): string {
-  const parts = [`name:"${h.name}"`]
+  const safeName = h.name.replace(/"/g, '')
+  const parts = [`name:"${safeName}"`]
   if (h.number) parts.push(`number:${parseInt(h.number, 10)}`)
   if (h.printedTotal) parts.push(`set.printedTotal:${parseInt(h.printedTotal, 10)}`)
   return parts.join(' ')
@@ -56,14 +57,18 @@ export async function searchCards(
   const headers: Record<string, string> = {}
   if (opts.apiKey) headers['X-Api-Key'] = opts.apiKey
   const res = await fetcher(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=10`, { headers })
-  if (!res.ok) throw new Error(`TCG API ${res.status}`)
+  if (!res.ok) throw new Error(`TCG API ${res.status} ${res.statusText}`)
   const json = await res.json()
-  return z.array(ApiCard).parse(json.data).map((c) => ({
-    id: c.id, name: c.name, number: c.number, rarity: c.rarity ?? null,
-    setId: c.set.id, setName: c.set.name, printedTotal: c.set.printedTotal,
-    imageSmall: c.images.small, imageLarge: c.images.large,
-    pokedexNumbers: c.nationalPokedexNumbers ?? [],
-    price: pickPrice(c.tcgplayer?.prices),
-    priceUpdatedAt: c.tcgplayer?.updatedAt ?? null,
-  }))
+  const items: unknown[] = Array.isArray(json.data) ? json.data : []
+  return items
+    .map((item) => ApiCard.safeParse(item))
+    .filter((r): r is { success: true; data: z.infer<typeof ApiCard> } => r.success)
+    .map(({ data: c }) => ({
+      id: c.id, name: c.name, number: c.number, rarity: c.rarity ?? null,
+      setId: c.set.id, setName: c.set.name, printedTotal: c.set.printedTotal,
+      imageSmall: c.images.small, imageLarge: c.images.large,
+      pokedexNumbers: c.nationalPokedexNumbers ?? [],
+      price: pickPrice(c.tcgplayer?.prices),
+      priceUpdatedAt: c.tcgplayer?.updatedAt ?? null,
+    }))
 }
