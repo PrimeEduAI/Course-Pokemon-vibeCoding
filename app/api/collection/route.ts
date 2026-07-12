@@ -6,6 +6,8 @@ import type { TcgCard } from '@/lib/tcg'
 
 export const runtime = 'nodejs'
 
+const PHOTO_PATH_RE = /^data\/photos\/\d+\.(jpe?g|png|webp)$/
+
 export async function GET() {
   return NextResponse.json({ cards: listCards(getDb()) })
 }
@@ -13,8 +15,9 @@ export async function GET() {
 export async function POST(req: Request) {
   const body = (await req.json()) as { card: TcgCard; photoPath: string | null }
   if (!body?.card?.id) return NextResponse.json({ error: 'card required' }, { status: 400 })
+  const photoPath = typeof body.photoPath === 'string' && PHOTO_PATH_RE.test(body.photoPath) ? body.photoPath : null
   try {
-    const inserted = await addCard(getDb(), body.card, body.photoPath, getPokemon)
+    const inserted = await addCard(getDb(), body.card, photoPath, getPokemon)
     return NextResponse.json({ ok: true, id: inserted.id })
   } catch (e) {
     const msg = String(e)
