@@ -1319,3 +1319,5 @@ git add -A && git commit -m "feat(m2): scan ui + collection count"
 4. SPEED/lerp/鏡頭偏移等 magic numbers 收斂成 tunables 物件
 5. 視覺高度 1.2 vs 膠囊高度 2.0 不一致 — M3 調 hitbox 時對齊
 6. lib/showdown-name.ts 的 combining-mark regex 改 `̀-ͯ` 寫法（防編輯器 renormalize）
+7. **moves.slice(0,40) 資料品質風險**：PokéAPI 招式表無排序，前 40 筆可能漏掉本系招、留下墊招 —— M3 選招邏輯（挑 2 招對應原型）要改成從完整招式表按威力/屬性篩選，或入庫時就篩
+8. 資產路徑散落硬編碼（glb/cries）→ 收斂成 `assetPath(kind, dexId)` helper（做 M5 畫風切換時一併處理）
