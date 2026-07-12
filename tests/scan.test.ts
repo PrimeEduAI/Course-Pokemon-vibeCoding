@@ -35,3 +35,12 @@ test('scanCard retries name-only when strict query is empty', async () => {
   expect(queries).toHaveLength(2)
   expect(result.candidates).toHaveLength(1)
 })
+
+test('scanCard resolves with empty candidates when both queries find nothing', async () => {
+  const result = await scanCard({
+    extract: async () => ({ name: 'Fakemon', number: '01', printedTotal: '99' }),
+    search: async () => [],
+  })
+  expect(result.candidates).toEqual([])
+  expect(result.hint.name).toBe('Fakemon')
+})
