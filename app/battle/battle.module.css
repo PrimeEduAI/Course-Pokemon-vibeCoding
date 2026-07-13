@@ -897,3 +897,11 @@
   line-height: 1;
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
 }
+
+/* 戰前畫面版操作說明：跟著版面流動，不絕對定位 */
+.hintInline {
+  position: static;
+  transform: none;
+  margin: 14px auto 0;
+  display: inline-block;
+}

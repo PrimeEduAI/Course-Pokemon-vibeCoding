@@ -238,6 +238,11 @@ function FighterSelect({ arenaId, onBack, onConfirm }: {
       <div className={styles.selectHint}>
         點選出戰 — <span className={styles.selectHintHot}>掃描卡片</span> 可解鎖更多收藏寶可夢
       </div>
+
+      {/* 操作說明只放在戰前畫面，不進戰鬥 HUD */}
+      <div className={`${styles.hint} ${styles.hintInline}`}>
+        <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>Space</span> 跳躍 · <span className={styles.hintKeys}>J K U</span> 技能 · <span className={styles.hintKeys}>L</span> 疾走 · <span className={styles.hintKeys}>R</span> 招牌能力（計量滿） · 鏡頭自動鎖定對手
+      </div>
       <button className={styles.backBtn} onClick={onBack}>← 返回戰場選擇</button>
     </div>
   )
@@ -490,11 +495,6 @@ export default function BattlePage() {
         {gimmickBanner && (
           <div key={gimmickBanner.key} className={styles.gimmickBanner}>{gimmickBanner.text}</div>
         )}
-
-        {/* 操作提示 */}
-        <div className={styles.hint}>
-          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>Space</span> 跳躍 · <span className={styles.hintKeys}>J K U</span> 技能 · <span className={styles.hintKeys}>L</span> 疾走 · <span className={styles.hintKeys}>R</span> 招牌能力（計量滿） · 鏡頭自動鎖定對手
-        </div>
 
         {/* 勝負結算 */}
         {phase !== 'fighting' && (
