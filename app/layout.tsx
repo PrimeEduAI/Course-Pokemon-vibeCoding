@@ -8,7 +8,8 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-Hant">
-      <body>{children}</body>
+      {/* suppressHydrationWarning：瀏覽器擴充（如 ColorZilla 的 cz-shortcut-listen）會在 React 載入前改 body 屬性 */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   )
 }

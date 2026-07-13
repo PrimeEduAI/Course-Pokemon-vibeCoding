@@ -90,7 +90,7 @@ function WelcomeTrio() {
   const trio = [
     { dexId: 25, name: '皮卡丘', x: 0, z: -0.7, color: '#ffe08a' },
     { dexId: 6, name: '噴火龍', x: -2.7, z: 1.1, color: '#ffc38a' },
-    { dexId: 150, name: '超夢', x: 2.7, z: 1.1, color: '#d8c2ff' },
+    { dexId: 658, name: '甲賀忍蛙', x: 2.7, z: 1.1, color: '#7fd4e8' },
   ]
   const lights = [useRef<ThreeSpotLight | null>(null), useRef<ThreeSpotLight | null>(null), useRef<ThreeSpotLight | null>(null)]
   const groups = [useRef<Group>(null), useRef<Group>(null), useRef<Group>(null)]
