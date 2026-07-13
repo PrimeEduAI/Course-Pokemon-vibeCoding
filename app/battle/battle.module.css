@@ -679,6 +679,51 @@
   padding: 6px 10px;
 }
 
+/* BGM 開關：貼在 StyleSwitch 正下方（右上角），聯盟青色霓虹風 */
+.bgmToggle {
+  position: absolute;
+  top: 74px;
+  right: 22px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px 6px;
+  font-family: 'DotGothic16', 'PressStart2P', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #05070f;
+  background: #29d8ff;
+  border: 1px solid rgba(41, 216, 255, 0.75);
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
+  box-shadow: 0 0 16px rgba(41, 216, 255, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+.bgmToggle:hover {
+  box-shadow: 0 0 22px rgba(41, 216, 255, 0.85), inset 0 0 10px rgba(255, 255, 255, 0.45);
+}
+.bgmToggleOff {
+  color: #9aa5c9;
+  background: linear-gradient(135deg, rgba(10, 13, 26, 0.92), rgba(16, 20, 38, 0.82));
+  border-color: rgba(154, 165, 201, 0.45);
+  box-shadow: none;
+}
+.bgmToggleOff:hover {
+  color: #e8ecff;
+  box-shadow: 0 0 12px rgba(41, 216, 255, 0.25);
+}
+.bgmToggleIcon {
+  font-size: 15px;
+  line-height: 1;
+}
+.bgmToggleLabel {
+  font-family: 'PressStart2P', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+}
+
 .loading {
   display: grid;
   place-items: center;
