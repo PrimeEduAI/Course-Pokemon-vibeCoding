@@ -6,9 +6,12 @@ import { Group, Vector3 } from 'three'
 import { MOVES } from '@/lib/battle/moves'
 import { canFire } from '@/lib/battle/cooldown'
 import { useBattle } from '@/stores/useBattle'
+import { useArena } from '@/stores/useArena'
+import { useStyleMode } from '@/stores/useStyleMode'
 import { battleWorld, ENEMY_SPAWN } from '@/stores/battleWorld'
 import { hitPlayer } from './combat'
-import PokemonModel from './PokemonModel'
+import { ARENAS } from './arenas/types'
+import PokemonRenderable from './renderables/PokemonRenderable'
 
 const APPROACH_SPEED = 3.5
 const ATTACK_RANGE = 6
@@ -54,6 +57,9 @@ export default function EnemyCharizard() {
     koT: 0,
   })
   const resetNonce = useBattle((s) => s.resetNonce)
+  const mode = useStyleMode((s) => s.mode)
+  const arenaId = useArena((s) => s.arenaId)
+  const arenaGen = ARENAS.find((a) => a.id === arenaId)?.gen
 
   useEffect(() => {
     if (!body.current) return
@@ -182,7 +188,7 @@ export default function EnemyCharizard() {
       <CapsuleCollider args={[0.65, 0.7]} />
       <group ref={visual}>
         <group position={[0, -1.35, 0]}>
-          <PokemonModel dexId={6} targetHeight={2.2} entity="enemy" />
+          <PokemonRenderable dexId={6} mode={mode} facing="front" targetHeight={2.2} arenaGen={arenaGen} entity="enemy" />
         </group>
       </group>
     </RigidBody>

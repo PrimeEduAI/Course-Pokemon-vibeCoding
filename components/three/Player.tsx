@@ -7,9 +7,12 @@ import { Group, Vector3 } from 'three'
 import { dirFromKeys, type KeyState } from '@/lib/movement'
 import { MOVES } from '@/lib/battle/moves'
 import { useBattle } from '@/stores/useBattle'
+import { useArena } from '@/stores/useArena'
+import { useStyleMode } from '@/stores/useStyleMode'
 import { battleWorld, PLAYER_SPAWN } from '@/stores/battleWorld'
 import { hitEnemy } from './combat'
-import PokemonModel from './PokemonModel'
+import { ARENAS } from './arenas/types'
+import PokemonRenderable from './renderables/PokemonRenderable'
 
 const SPEED = 6
 const DASH_MULT = 3
@@ -39,6 +42,9 @@ export default function Player({ dexId }: { dexId: number }) {
   const knockVel = useRef(new Vector3())
   const koT = useRef(0)
   const resetNonce = useBattle((s) => s.resetNonce)
+  const mode = useStyleMode((s) => s.mode)
+  const arenaId = useArena((s) => s.arenaId)
+  const arenaGen = ARENAS.find((a) => a.id === arenaId)?.gen
 
   // 再戰：重置位置與姿態
   useEffect(() => {
@@ -164,7 +170,7 @@ export default function Player({ dexId }: { dexId: number }) {
       <CapsuleCollider args={[0.5, 0.55]} />
       <group ref={visual}>
         <group position={[0, -1.05, 0]}>
-          <PokemonModel dexId={dexId} targetHeight={1.9} entity="player" />
+          <PokemonRenderable dexId={dexId} mode={mode} facing="back" targetHeight={1.9} arenaGen={arenaGen} entity="player" />
         </group>
       </group>
     </RigidBody>

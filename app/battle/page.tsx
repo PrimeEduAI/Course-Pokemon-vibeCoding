@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import styles from './battle.module.css'
 import { useBattle, DASH_COOLDOWN_MS } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
+import { useStyleMode, type StyleMode } from '@/stores/useStyleMode'
 import { ARENAS, FIELD_LABEL, type ArenaId } from '@/components/three/arenas/types'
 import { MOVES } from '@/lib/battle/moves'
 import { cooldownProgress } from '@/lib/battle/cooldown'
@@ -31,6 +32,36 @@ function MoveSlot({ keyCap, name, progress }: { keyCap: string; name: string; pr
           style={{ background: `conic-gradient(rgba(4, 6, 16, 0.82) ${(1 - progress) * 360}deg, transparent 0deg)` }}
         />
       )}
+    </div>
+  )
+}
+
+const STYLE_LABEL: Record<StyleMode, string> = { pixel: '點陣', animated: '動畫', modern: '3D' }
+const STYLE_ORDER: StyleMode[] = ['pixel', 'animated', 'modern']
+
+/** 畫風切換（F4）：點陣 / 動畫 / 3D 三段切換 + Tab 快捷鍵提示 */
+function StyleSwitch() {
+  const mode = useStyleMode((s) => s.mode)
+  const setMode = useStyleMode((s) => s.set)
+  return (
+    <div className={styles.styleSwitch}>
+      <div className={styles.styleSeg}>
+        {STYLE_ORDER.map((m) => (
+          <button
+            key={m}
+            className={`${styles.styleBtn} ${mode === m ? styles.styleBtnActive : ''}`}
+            onClick={(e) => {
+              setMode(m)
+              e.currentTarget.blur() // 免得之後按 Enter/空白鍵誤觸
+            }}
+          >
+            {STYLE_LABEL[m]}
+          </button>
+        ))}
+      </div>
+      <div className={styles.styleHint}>
+        <span className={styles.hintKeys}>TAB</span> 切換畫風
+      </div>
     </div>
   )
 }
@@ -97,6 +128,19 @@ export default function BattlePage() {
     return () => clearInterval(t)
   }, [])
 
+  // 畫風：讀回上次選擇 + Tab 循環切換（preventDefault 避免焦點跳走）
+  useEffect(() => {
+    useStyleMode.getState().hydrate()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Tab' || e.code === 'Tab') {
+        e.preventDefault()
+        useStyleMode.getState().cycle()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const pRatio = playerHp / playerMaxHp
   const eRatio = enemyHp / enemyMaxHp
   const hitFlash = now - lastPlayerHitAt < 450
@@ -106,6 +150,7 @@ export default function BattlePage() {
     return (
       <div className={styles.wrap}>
         <ArenaSelect onChoose={choose} />
+        <StyleSwitch />
       </div>
     )
   }
@@ -124,10 +169,13 @@ export default function BattlePage() {
         <div className={styles.banner}>
           <div className={styles.bannerSmall}>{arenaDef.bannerEn}</div>
           <div className={styles.bannerMain}>{arenaDef.bannerZh}</div>
-          {arenaId === 'gen1' && fieldType && (
+          {fieldType && (
             <div className={styles.fieldChip} data-field={fieldType}>{FIELD_LABEL[fieldType]}</div>
           )}
         </div>
+
+        {/* 畫風切換（F4） */}
+        <StyleSwitch />
 
         {/* 我方出戰 */}
         <div className={`${styles.chip} ${styles.chipPlayer}`}>

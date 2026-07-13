@@ -4,3 +4,4 @@ data/
 public/assets/
 .env.local
 *.tsbuildinfo
+.claude/
