@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import styles from './battle.module.css'
 import { useBattle, DASH_COOLDOWN_MS } from '@/stores/useBattle'
-import { useArena } from '@/stores/useArena'
+import { ARENA_IDS, useArena } from '@/stores/useArena'
 import { useStyleMode, type StyleMode } from '@/stores/useStyleMode'
 import { ARENAS, FIELD_LABEL, type ArenaId } from '@/components/three/arenas/types'
 import { MOVES } from '@/lib/battle/moves'
@@ -66,7 +66,7 @@ function StyleSwitch() {
   )
 }
 
-/** 選擇聯盟戰場：Gen 1–8 卡片，僅 gen1 / gen8 可出戰 */
+/** 選擇聯盟戰場：Gen 1–8 全數開放 */
 function ArenaSelect({ onChoose }: { onChoose: (id: ArenaId) => void }) {
   return (
     <div className={styles.selectOverlay}>
@@ -98,8 +98,7 @@ function ArenaSelect({ onChoose }: { onChoose: (id: ArenaId) => void }) {
         )}
       </div>
       <div className={styles.selectHint}>
-        可出戰：<span className={styles.selectHintHot}>GEN 1 石英高原</span> ·{' '}
-        <span className={styles.selectHintHot}>GEN 8 宮門體育場</span>
+        <span className={styles.selectHintHot}>八大聯盟戰場 全數開放</span> — 各世代招牌機制等你見識
       </div>
     </div>
   )
@@ -126,6 +125,13 @@ export default function BattlePage() {
   useEffect(() => {
     const t = setInterval(() => setNow(performance.now()), 100)
     return () => clearInterval(t)
+  }, [])
+
+  // dev 後門：?arena=gen5 直接進場（掛載後套用，避免 SSR hydration 不一致）
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('arena')
+    if (q && (ARENA_IDS as string[]).includes(q)) choose(q as ArenaId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 畫風：讀回上次選擇 + Tab 循環切換（preventDefault 避免焦點跳走）
