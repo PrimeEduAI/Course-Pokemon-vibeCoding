@@ -2,6 +2,10 @@
 import { useState } from 'react'
 import type { Candidate } from '@/lib/scan'
 import type { CardHint } from '@/lib/tcg'
+import RotomFace, { type RotomMood } from '@/components/scan/RotomFace'
+import Viewfinder from '@/components/scan/Viewfinder'
+import DexResults from '@/components/scan/DexResults'
+import styles from './scan.module.css'
 
 type ScanResult = { hint: CardHint; candidates: Candidate[]; photoPath: string }
 
@@ -40,29 +44,50 @@ export default function ScanPage() {
     setMessage(res.ok ? `✅ 已加入收藏：${c.name}` : `⚠️ ${json.error}`)
   }
 
+  // presentation-only mood derived from the existing state
+  const mood: RotomMood = busy
+    ? 'scanning'
+    : message.startsWith('✅')
+      ? 'happy'
+      : message && !(result && result.candidates.length > 0)
+        ? 'sad'
+        : 'idle'
+
   return (
-    <main style={{ padding: 40, maxWidth: 900 }}>
-      <h1>📷 拍卡入庫</h1>
-      <p style={{ margin: '12px 0' }}>
-        <input type="file" accept="image/*" capture="environment" disabled={busy}
-          onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
-      </p>
-      {preview && <img src={preview} alt="preview" style={{ maxWidth: 260, borderRadius: 8 }} />}
-      {busy && <p>🔍 辨識中…</p>}
-      {message && <p style={{ margin: '12px 0' }}>{message}</p>}
-      {result && result.candidates.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
-          {result.candidates.map((c) => (
-            <div key={c.id} style={{ border: c.validated ? '2px solid #4caf50' : '1px solid #555', borderRadius: 8, padding: 12, width: 220 }}>
-              <img src={c.imageSmall} alt={c.name} style={{ width: '100%' }} />
-              <p><b>{c.name}</b> {c.validated && '✓'}</p>
-              <p>{c.setName} · {c.number}/{c.printedTotal}</p>
-              <p>{c.price?.market != null ? `市價 US$${c.price.market}` : '無市價資料'}</p>
-              <button onClick={() => save(c)} disabled={busy} style={{ marginTop: 8, padding: '6px 12px' }}>加入收藏</button>
-            </div>
-          ))}
+    <main className={styles.dexRoot}>
+      <div className={`${styles.device} ${styles[`dev_${mood}`]}`}>
+        {/* ---- top bar of the Rotom Dex frame ---- */}
+        <div className={styles.topBar}>
+          <a href="/" className={styles.dpad} aria-label="返回首頁">
+            <span className={styles.dpadArrow} />
+            <span className={styles.dpadLabel}>HOME</span>
+          </a>
+
+          <div className={styles.faceWrap}>
+            <RotomFace mood={mood} />
+            <span className={styles.deviceName}>ROTOM 圖鑑</span>
+          </div>
+
+          <div className={styles.vents} aria-hidden="true">
+            <span className={styles.screw} />
+            <span className={styles.ventGrill} />
+          </div>
         </div>
-      )}
+
+        {/* ---- twin screens ---- */}
+        <div className={styles.screens}>
+          <Viewfinder preview={preview} busy={busy} onFile={onFile} />
+          <DexResults result={result} message={message} busy={busy} onSave={save} />
+        </div>
+
+        {/* ---- lower frame details ---- */}
+        <div className={styles.bottomBar} aria-hidden="true">
+          <span className={styles.screw} />
+          <span className={styles.hingeLine} />
+          <span className={styles.speaker} />
+          <span className={styles.screw} />
+        </div>
+      </div>
     </main>
   )
 }

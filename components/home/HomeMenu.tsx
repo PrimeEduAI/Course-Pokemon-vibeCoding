@@ -39,25 +39,31 @@ const CARDS: MenuCard[] = [
     cta: 'ENTER ARENA',
   },
   {
-    href: '#',
+    href: '/center',
     icon: '🏛️',
     index: '03',
     title: '收藏大廳',
     desc: '漫步在你的傳說收藏之間，展示每一張珍藏卡。',
     color: 'var(--violet)',
     art: '/assets/artwork/150.png',
-    cta: 'M4 · 即將開放',
-    soon: true,
+    cta: 'ENTER HALL',
   },
 ]
 
 // diagonal floating showcase artwork (parallax bob)
-const SHOWCASE = [
-  { id: 6,   glow: '#ff7a3d', sz: 258, top: '9%',  left: '-3%',  rot: '-6deg', dur: '6.5s', del: '0s',    op: 1 },
-  { id: 448, glow: '#4d7cff', sz: 205, top: '54%', left: '3%',   rot: '5deg',  dur: '6s',   del: '-2.4s', op: 1 },
-  { id: 384, glow: '#37d67a', sz: 250, top: '4%',  left: '80%',  rot: '7deg',  dur: '7.8s', del: '-1.2s', op: 1 },
-  { id: 94,  glow: '#a35bff', sz: 196, top: '56%', left: '84%',  rot: '-8deg', dur: '7.2s', del: '-0.7s', op: 1 },
-  { id: 887, glow: '#7b6bff', sz: 132, top: '36%', left: '93%',  rot: '4deg',  dur: '8.4s', del: '-3.1s', op: 0.6 },
+// hero artworks are anchored with clamp() insets + responsive size so they
+// stay fully inside the viewport from ~900px up to 1920px; only the faint
+// depth-accent one (op < 1) is allowed to bleed slightly off the edge.
+type Showcase = {
+  id: number; glow: string; sz: string; top: string; rot: string
+  dur: string; del: string; op: number; left?: string; right?: string
+}
+const SHOWCASE: Showcase[] = [
+  { id: 6,   glow: '#ff7a3d', sz: 'clamp(150px, 15vw, 240px)', top: '8%',  left: 'clamp(4px, 1.5vw, 24px)',  rot: '-6deg', dur: '6.5s', del: '0s',    op: 1 },
+  { id: 448, glow: '#4d7cff', sz: 'clamp(120px, 12vw, 196px)', top: '55%', left: 'clamp(8px, 2.5vw, 40px)',  rot: '5deg',  dur: '6s',   del: '-2.4s', op: 1 },
+  { id: 384, glow: '#37d67a', sz: 'clamp(140px, 14vw, 232px)', top: '5%',  right: 'clamp(4px, 1.5vw, 24px)', rot: '7deg',  dur: '7.8s', del: '-1.2s', op: 1 },
+  { id: 94,  glow: '#a35bff', sz: 'clamp(115px, 11vw, 188px)', top: '56%', right: 'clamp(6px, 2vw, 32px)',   rot: '-8deg', dur: '7.2s', del: '-0.7s', op: 1 },
+  { id: 887, glow: '#7b6bff', sz: 'clamp(88px, 8vw, 128px)',   top: '37%', right: '-1.5%',                   rot: '4deg',  dur: '8.4s', del: '-3.1s', op: 0.55 },
 ]
 
 // marching pixel gifs along the bottom edge (duplicated for seamless loop)
@@ -113,8 +119,9 @@ export default function HomeMenu({ count }: { count: number }) {
                 style={{
                   top: m.top,
                   left: m.left,
+                  right: m.right,
                   opacity: m.op,
-                  ['--sz' as string]: `${m.sz}px`,
+                  ['--sz' as string]: m.sz,
                   ['--glow' as string]: m.glow,
                   ['--rot' as string]: m.rot,
                   ['--dur' as string]: m.dur,

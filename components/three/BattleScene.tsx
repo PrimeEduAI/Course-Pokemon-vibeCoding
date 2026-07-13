@@ -7,7 +7,10 @@ import { ToneMappingMode } from 'postprocessing'
 import { Suspense } from 'react'
 import ArenaFloor from './ArenaFloor'
 import Player from './Player'
-import PokemonModel from './PokemonModel'
+import EnemyCharizard from './EnemyCharizard'
+import Projectiles from './Projectiles'
+import FXLayer from './FXLayer'
+import DamagePopups from './DamagePopups'
 import Stadium from './Stadium'
 import Floodlights from './Floodlights'
 import Jumbotron from './Jumbotron'
@@ -19,6 +22,10 @@ const keyMap = [
   { name: 'backward', keys: ['ArrowDown'] },
   { name: 'left', keys: ['ArrowLeft'] },
   { name: 'right', keys: ['ArrowRight'] },
+  // 同時綁 code 與 key：部分環境的合成鍵盤事件只有 key 沒有 code
+  { name: 'attack1', keys: ['KeyZ', 'z', 'Z'] },
+  { name: 'attack2', keys: ['KeyX', 'x', 'X'] },
+  { name: 'dash', keys: ['KeyC', 'c', 'C'] },
 ]
 
 export default function BattleScene() {
@@ -55,12 +62,14 @@ export default function BattleScene() {
           <Physics>
             <ArenaFloor />
             <Player dexId={25} />
+            {/* 對手：噴火龍 AI */}
+            <EnemyCharizard />
           </Physics>
 
-          {/* 對手：噴火龍，面向玩家出生點 */}
-          <group position={[0, 0, -6.5]}>
-            <PokemonModel dexId={6} targetHeight={1.7} />
-          </group>
+          {/* 戰鬥表現層：彈體 / 打擊特效 / 傷害數字 */}
+          <Projectiles />
+          <FXLayer />
+          <DamagePopups />
 
           <Stadium />
           <Floodlights />
