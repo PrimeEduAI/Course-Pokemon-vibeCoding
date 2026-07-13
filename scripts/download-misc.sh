@@ -1,7 +1,7 @@
 #!/bin/bash
 # cries (PokeAPI), official artwork (PokeAPI sparse), type icons, fonts
 set -uo pipefail
-ROOT="/Users/somer/Desktop/CL/ai-camp-curriculum/pokemon-3d-arena"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ASSETS="$ROOT/public/assets"
 
 echo "=== 1. cries (PokeAPI/cries tarball) ==="

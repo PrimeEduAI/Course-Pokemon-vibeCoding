@@ -1,7 +1,7 @@
 #!/bin/bash
 # GLB 3D models from Pokemon-3D-api/assets (sparse: regular/mega/gmax/alolan/galar, no shiny/fusion)
 set -euo pipefail
-ROOT="/Users/somer/Desktop/CL/ai-camp-curriculum/pokemon-3d-arena"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/public/assets/glb"
 TMP="$ROOT/.tmp-glb"
 rm -rf "$TMP"

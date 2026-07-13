@@ -5,9 +5,10 @@
 # Idempotent: re-downloads only files missing or <500KB. Source URLs pinned in the TRACKS table below
 # (see also public/assets/bgm/SOURCES.md). Same style as scripts/download-*.sh.
 set -uo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 BASE="https://downloads.khinsider.com/game-soundtracks/album"
-DEST="/Users/somer/Desktop/CL/ai-camp-curriculum/pokemon-3d-arena/public/assets/bgm"
+DEST="$ROOT/public/assets/bgm"
 mkdir -p "$DEST"
 
 # out|album-slug|track-file (single URL-encoded segment as it appears in the album page href)

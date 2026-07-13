@@ -1,7 +1,8 @@
 #!/bin/bash
 # Poly Haven 2k HDRIs (CC0) for arena environments; skips slugs that 404
 set -uo pipefail
-DEST="/Users/somer/Desktop/CL/ai-camp-curriculum/pokemon-3d-arena/public/assets/hdri"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DEST="$ROOT/public/assets/hdri"
 mkdir -p "$DEST"
 # arena moods: day stadium/outdoor, night city (Gen8), snow (Gen2), ocean sunset (Gen7), night sky (Gen5)
 CANDIDATES="venice_sunset moonless_golf snowy_forest snowy_park_01 potsdamer_platz shanghai_bund kiara_1_dawn table_mountain_1 autumn_field industrial_sunset_02"

@@ -2,8 +2,9 @@
 # Showdown sprite sets mirrored from play.pokemonshowdown.com/sprites/
 # pixel mode: gen1-gen5 static PNG; animated mode: gen5ani/ani GIF (front+back)
 set -uo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="https://play.pokemonshowdown.com/sprites"
-DEST="/Users/somer/Desktop/CL/ai-camp-curriculum/pokemon-3d-arena/public/assets/sprites"
+DEST="$ROOT/public/assets/sprites"
 DIRS="gen1 gen2 gen3 gen4 gen5 gen5ani gen5ani-back ani ani-back"
 for dir in $DIRS; do
   mkdir -p "$DEST/$dir"
