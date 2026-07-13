@@ -22,7 +22,7 @@ export function parseVisionResponse(text: string): CardHint {
   return VisionCard.parse(parsed)
 }
 
-const PROMPT = `你看到的是一張寶可夢集換式卡牌的照片。請讀出：
+export const PROMPT = `你看到的是一張寶可夢集換式卡牌的照片。請讀出：
 1. name：卡片最上方的寶可夢/卡片英文名稱（保留 ex/V/VMAX 等後綴）
 2. number 與 printedTotal：卡片底部角落的收藏編號，格式如 "025/193" → number="025", printedTotal="193"
 只回覆 JSON（不要其他文字）：{"name": string, "number": string|null, "printedTotal": string|null}

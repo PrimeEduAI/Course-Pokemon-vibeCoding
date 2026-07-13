@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { mkdirSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
-import { extractCardInfo } from '@/lib/vision'
+import { resolve } from 'node:path'
+import { extractCard } from '@/lib/vision-router'
 import { searchCards } from '@/lib/tcg'
 import { scanCard } from '@/lib/scan'
 
@@ -23,10 +24,11 @@ export async function POST(req: Request) {
   const ext = mediaType.split('/')[1]
   const photoPath = `data/photos/${Date.now()}.${ext}`
   await writeFile(photoPath, buf)
+  const photoAbsPath = resolve(photoPath)
 
   try {
     const result = await scanCard({
-      extract: () => extractCardInfo(buf.toString('base64'), mediaType),
+      extract: () => extractCard(buf, mediaType, photoAbsPath),
       search: (q) => searchCards(q, { apiKey: process.env.POKEMONTCG_API_KEY }),
     })
     return NextResponse.json({ ...result, photoPath })
