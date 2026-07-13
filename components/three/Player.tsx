@@ -6,7 +6,6 @@ import { useEffect, useRef } from 'react'
 import { Group, Vector3 } from 'three'
 import { dirFromKeys, rotateDirByYaw, type KeyState } from '@/lib/movement'
 import { useOrbitControls, ANCHOR_Y } from './CameraRig'
-import { MOVES } from '@/lib/battle/moves'
 import { useBattle } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
 import { useStyleMode } from '@/stores/useStyleMode'
@@ -26,7 +25,8 @@ const hitPos = new Vector3()
 
 export type BattleKeys = KeyState & { attack1: boolean; attack2: boolean; dash: boolean }
 
-export default function Player({ dexId }: { dexId: number }) {
+export default function Player() {
+  const fighter = useBattle((s) => s.playerFighter)
   const body = useRef<RapierRigidBody>(null)
   const visual = useRef<Group>(null)
   const [sub, getKeys] = useKeyboardControls<keyof BattleKeys>()
@@ -93,32 +93,35 @@ export default function Player({ dexId }: { dexId: number }) {
       wants.current.attack1 = false
       wants.current.attack2 = false
       wants.current.dash = false
-      if (wantA1 && st.tryFire('quickAttack', now)) {
-        // 電光一閃：向面向衝刺 + 弧形斬擊，命中 = 距離內且 ±60° 前方錐角
+      const meleeMove = st.playerFighter.moves[0]
+      const projMove = st.playerFighter.moves[1]
+      if (wantA1 && st.tryFire(0, now)) {
+        // 近戰（Z）：向面向衝刺 + 弧形斬擊，命中 = 距離內且 ±60° 前方錐角
         lungeUntil.current = now + LUNGE_MS
         st.addFx({
           kind: 'slash',
           pos: [p.x + facingV.x * 1.0, p.y + 0.35, p.z + facingV.z * 1.0],
-          color: '#c8f6ff',
+          color: meleeMove.color,
           angle: facing,
           scale: 1,
         })
         toEnemy.copy(battleWorld.enemyPos).sub(battleWorld.playerPos)
         const dist = toEnemy.length()
         toEnemy.setY(0).normalize()
-        const range = (MOVES.quickAttack.range ?? 2.2) + 0.8
+        // 有效距離隨對手體型微幅放大（大型 BOSS 剛體較寬）
+        const range = (meleeMove.range ?? 2.2) + st.enemyFighter.targetHeight * 0.3
         if (dist <= range && facingV.dot(toEnemy) > 0.5) {
           hitPos.copy(battleWorld.enemyPos)
-          hitEnemy(MOVES.quickAttack, hitPos)
-          st.addFx({ kind: 'burst', pos: [hitPos.x, hitPos.y + 0.4, hitPos.z], color: '#e8fbff', angle: 0, scale: 0.8 })
+          hitEnemy(meleeMove, hitPos)
+          st.addFx({ kind: 'burst', pos: [hitPos.x, hitPos.y + 0.4, hitPos.z], color: meleeMove.color, angle: 0, scale: 0.8 })
         }
       }
-      if (wantA2 && st.tryFire('thunderbolt', now)) {
-        // 十萬伏特：自動瞄準敵人方向的電球
+      if (wantA2 && st.tryFire(1, now)) {
+        // 投射（X）：自動瞄準敵人方向
         aimDir.copy(battleWorld.enemyPos).sub(battleWorld.playerPos).normalize()
         battleWorld.playerFacing = Math.atan2(aimDir.x, aimDir.z)
         st.spawnProjectile({
-          moveId: 'thunderbolt',
+          move: projMove,
           owner: 'player',
           origin: [p.x + aimDir.x * 0.7, p.y + 0.5, p.z + aimDir.z * 0.7],
           dir: [aimDir.x, aimDir.y, aimDir.z],
@@ -184,7 +187,7 @@ export default function Player({ dexId }: { dexId: number }) {
       <CapsuleCollider args={[0.5, 0.55]} />
       <group ref={visual}>
         <group position={[0, -1.05, 0]}>
-          <PokemonRenderable dexId={dexId} mode={mode} facing="back" targetHeight={1.9} arenaGen={arenaGen} entity="player" />
+          <PokemonRenderable dexId={fighter.dexId} mode={mode} facing="back" targetHeight={fighter.targetHeight} arenaGen={arenaGen} entity="player" />
         </group>
       </group>
     </RigidBody>

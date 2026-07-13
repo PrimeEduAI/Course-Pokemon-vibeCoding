@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
-import { addCard, isValidPhotoPath, listCards } from '@/lib/collection'
+import { addCard, isValidPhotoPath, listCards, listCollectionPokemon } from '@/lib/collection'
 import { getPokemon } from '@/lib/pokeapi'
 import type { TcgCard } from '@/lib/tcg'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
-  return NextResponse.json({ cards: listCards(getDb()) })
+  const db = getDb()
+  return NextResponse.json({ cards: listCards(db), pokemon: listCollectionPokemon(db) })
 }
 
 export async function POST(req: Request) {

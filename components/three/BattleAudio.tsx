@@ -12,7 +12,7 @@ function playCry(dex: number, volume = 0.5) {
   } catch { /* SSR / 無音訊裝置 */ }
 }
 
-/** 戰鬥音效：開場雙方鳴叫（含 autoplay 解鎖重試）、KO 時敗方鳴叫 */
+/** 戰鬥音效：開場雙方鳴叫（含 autoplay 解鎖重試）、KO 時敗方鳴叫；dex 跟著出戰組合走 */
 export default function BattleAudio() {
   const phase = useBattle((s) => s.phase)
   const resetNonce = useBattle((s) => s.resetNonce)
@@ -23,12 +23,13 @@ export default function BattleAudio() {
     openingPlayed.current = false
     const tryPlay = () => {
       if (openingPlayed.current) return
+      const { playerFighter, enemyFighter } = useBattle.getState()
       try {
-        const a = new Audio(cryUrl(25))
+        const a = new Audio(cryUrl(playerFighter.dexId))
         a.volume = 0.5
         a.play().then(() => {
           openingPlayed.current = true
-          setTimeout(() => playCry(6, 0.5), 650)
+          setTimeout(() => playCry(enemyFighter.dexId, 0.5), 650)
         }).catch(() => { /* 尚未互動：留待 keydown 重試 */ })
       } catch { /* ignore */ }
     }
@@ -47,8 +48,9 @@ export default function BattleAudio() {
 
   // KO：敗方鳴叫
   useEffect(() => {
-    if (phase === 'victory') playCry(6, 0.55)
-    else if (phase === 'defeat') playCry(25, 0.55)
+    const { playerFighter, enemyFighter } = useBattle.getState()
+    if (phase === 'victory') playCry(enemyFighter.dexId, 0.55)
+    else if (phase === 'defeat') playCry(playerFighter.dexId, 0.55)
   }, [phase])
 
   return null

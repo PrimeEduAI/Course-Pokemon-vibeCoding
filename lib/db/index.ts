@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS price_snapshots (
 );
 CREATE TABLE IF NOT EXISTS pokemon_cache (
   dex_id INTEGER PRIMARY KEY, name TEXT NOT NULL,
-  stats_json TEXT NOT NULL, moves_json TEXT NOT NULL, cry_url TEXT
+  stats_json TEXT NOT NULL, moves_json TEXT NOT NULL,
+  types_json TEXT NOT NULL DEFAULT '[]', cry_url TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_price_snapshots_card_id ON price_snapshots(card_id);`
 
@@ -31,6 +32,17 @@ export type Db = BaseSQLiteDatabase<'sync', unknown, typeof schema>
 // （eval('require') 在 Bun 的 ESM test context 下沒有 require，改用 createRequire）
 const dynamicRequire = createRequire(import.meta.url)
 
+/** 既有 DB 的寬容遷移：欄位已存在時 ALTER 會丟錯，吞掉即可 */
+const MIGRATIONS = [
+  "ALTER TABLE pokemon_cache ADD COLUMN types_json TEXT NOT NULL DEFAULT '[]'",
+]
+
+function applyMigrations(exec: (sql: string) => void) {
+  for (const sql of MIGRATIONS) {
+    try { exec(sql) } catch { /* duplicate column：已遷移 */ }
+  }
+}
+
 export function createDb(path: string): Db {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true })
   if (process.versions.bun) {
@@ -39,6 +51,7 @@ export function createDb(path: string): Db {
     const sqlite = new Database(path)
     sqlite.exec('PRAGMA journal_mode = WAL;')
     sqlite.exec(BOOTSTRAP)
+    applyMigrations((sql) => sqlite.exec(sql))
     return drizzle(sqlite, { schema }) as Db
   }
   const Database = dynamicRequire('better-sqlite3')
@@ -46,6 +59,7 @@ export function createDb(path: string): Db {
   const sqlite = new Database(path)
   sqlite.pragma('journal_mode = WAL')
   sqlite.exec(BOOTSTRAP)
+  applyMigrations((sql) => sqlite.exec(sql))
   return drizzle(sqlite, { schema }) as Db
 }
 

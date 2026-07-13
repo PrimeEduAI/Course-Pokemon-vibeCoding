@@ -7,7 +7,7 @@ import { ToneMappingMode } from 'postprocessing'
 import { Suspense } from 'react'
 import ArenaFloor from './ArenaFloor'
 import Player from './Player'
-import EnemyCharizard from './EnemyCharizard'
+import EnemyFighter from './EnemyFighter'
 import Projectiles from './Projectiles'
 import FXLayer from './FXLayer'
 import DamagePopups from './DamagePopups'
@@ -35,15 +35,17 @@ const FLOORS: Record<ArenaId, ComponentType<{ fieldType?: FieldType | null }>> =
   gen8: () => <ArenaFloor />,
 }
 
+// 同時綁 code 與 key：部分環境的合成鍵盤事件只有 key 沒有 code
 const keyMap = [
-  { name: 'forward', keys: ['ArrowUp'] },
-  { name: 'backward', keys: ['ArrowDown'] },
-  { name: 'left', keys: ['ArrowLeft'] },
-  { name: 'right', keys: ['ArrowRight'] },
-  // 同時綁 code 與 key：部分環境的合成鍵盤事件只有 key 沒有 code
-  { name: 'attack1', keys: ['KeyZ', 'z', 'Z'] },
-  { name: 'attack2', keys: ['KeyX', 'x', 'X'] },
-  { name: 'dash', keys: ['KeyC', 'c', 'C'] },
+  // 移動：WASD 為主，方向鍵保留為次要別名
+  { name: 'forward', keys: ['KeyW', 'w', 'W', 'ArrowUp'] },
+  { name: 'backward', keys: ['KeyS', 's', 'S', 'ArrowDown'] },
+  { name: 'left', keys: ['KeyA', 'a', 'A', 'ArrowLeft'] },
+  { name: 'right', keys: ['KeyD', 'd', 'D', 'ArrowRight'] },
+  // 技能：Q 近戰 / E 投射 / F 疾走
+  { name: 'attack1', keys: ['KeyQ', 'q', 'Q'] },
+  { name: 'attack2', keys: ['KeyE', 'e', 'E'] },
+  { name: 'dash', keys: ['KeyF', 'f', 'F'] },
 ]
 
 interface BattleSceneProps {
@@ -66,9 +68,9 @@ export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
 
           <Physics>
             <Floor fieldType={fieldType} />
-            <Player dexId={25} />
-            {/* 對手：噴火龍 AI */}
-            <EnemyCharizard />
+            <Player />
+            {/* 對手：世代 BOSS AI */}
+            <EnemyFighter />
           </Physics>
 
           {/* 戰鬥表現層：彈體 / 打擊特效 / 傷害數字 */}

@@ -2,7 +2,15 @@
 export const DEX_NAMES: Record<number, string> = {
   6: 'charizard',
   25: 'pikachu',
+  133: 'eevee',
   150: 'mewtwo',
+  249: 'lugia',
+  384: 'rayquaza',
+  448: 'lucario',
+  643: 'reshiram',
+  658: 'greninja',
+  791: 'solgaleo',
+  888: 'zacian',
 }
 
 /** dexId → sprite 檔名；不在名單內回傳 null（呼叫端 fallback 至官方繪圖）。 */

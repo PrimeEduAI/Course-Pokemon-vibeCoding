@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { CHARIZARD, MOVES, PIKACHU, hasStab, hpPool } from '@/lib/battle/moves'
+import { MOVES, hasStab, hpPool } from '@/lib/battle/moves'
+import { SPECIES, toFighter } from '@/lib/battle/species'
 import { getTypeMult } from '@/lib/battle/typeChart'
 import { computeDamage } from '@/lib/battle/damage'
 import { canFire, cooldownProgress } from '@/lib/battle/cooldown'
@@ -7,16 +8,32 @@ import { canFire, cooldownProgress } from '@/lib/battle/cooldown'
 const rngMax = () => 1 // roll = 1.0
 const rngMin = () => 0 // roll = 0.85
 
-describe('typeChart', () => {
-  test('電屬性打噴火龍（火/飛行）= 2x（飛行 2x × 火 1x）', () => {
+const PIKACHU = toFighter(SPECIES[25])
+const CHARIZARD = toFighter(SPECIES[6])
+
+describe('typeChart（完整 18 屬性表）', () => {
+  test('電打火/飛行 = 2x（飛行 2x × 火 1x）', () => {
+    expect(getTypeMult('electric', ['fire', 'flying'])).toBe(2)
     expect(getTypeMult('electric', CHARIZARD.types)).toBe(2)
   })
-  test('火打電 = 1x、一般打火/飛行 = 1x、火打火 = 0.5x', () => {
+  test('免疫：電打地面 = 0、龍打妖精 = 0、一般打幽靈 = 0、地面打飛行 = 0', () => {
+    expect(getTypeMult('electric', ['ground'])).toBe(0)
+    expect(getTypeMult('dragon', ['fairy'])).toBe(0)
+    expect(getTypeMult('normal', ['ghost'])).toBe(0)
+    expect(getTypeMult('ground', ['flying'])).toBe(0)
+  })
+  test('格鬥打鋼 = 2x、水打龍 = 0.5x', () => {
+    expect(getTypeMult('fighting', ['steel'])).toBe(2)
+    expect(getTypeMult('water', ['dragon'])).toBe(0.5)
+  })
+  test('複合連乘：格鬥打妖精/鋼（蒼響）= 0.5×2 = 1、電打水/飛行 = 4', () => {
+    expect(getTypeMult('fighting', ['fairy', 'steel'])).toBe(1)
+    expect(getTypeMult('electric', ['water', 'flying'])).toBe(4)
+  })
+  test('火打電 = 1x、一般打火/飛行 = 1x、火打火 = 0.5x、電打電 = 0.5x', () => {
     expect(getTypeMult('fire', PIKACHU.types)).toBe(1)
     expect(getTypeMult('normal', CHARIZARD.types)).toBe(1)
     expect(getTypeMult('fire', ['fire'])).toBe(0.5)
-  })
-  test('電打電 = 0.5x', () => {
     expect(getTypeMult('electric', ['electric'])).toBe(0.5)
   })
 })
@@ -55,9 +72,10 @@ describe('stats / moves data', () => {
     expect(hasStab(MOVES.quickAttack, PIKACHU)).toBe(false)
     expect(hasStab(MOVES.flamethrower, CHARIZARD)).toBe(true)
   })
-  test('招式定義完整：投射技有 speed、皆有冷卻', () => {
+  test('招式定義完整：投射技有 speed、皆有冷卻與顏色', () => {
     for (const m of Object.values(MOVES)) {
       expect(m.cooldownMs).toBeGreaterThan(0)
+      expect(m.color).toMatch(/^#/)
       if (m.kind === 'projectile') expect(m.speed ?? 0).toBeGreaterThan(0)
     }
   })

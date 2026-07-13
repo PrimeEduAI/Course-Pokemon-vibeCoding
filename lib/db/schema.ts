@@ -28,5 +28,6 @@ export const pokemonCache = sqliteTable('pokemon_cache', {
   name: text('name').notNull(),
   statsJson: text('stats_json').notNull(),
   movesJson: text('moves_json').notNull(),
+  typesJson: text('types_json').notNull().default('[]'), // JSON array of type names
   cryUrl: text('cry_url'),
 })

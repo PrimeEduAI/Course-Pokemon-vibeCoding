@@ -15,6 +15,7 @@ const stubFetch = (async () =>
         { base_stat: 999, stat: { name: 'accuracy' } }, // unknown key ignored
       ],
       moves: [{ move: { name: 'thunderbolt' } }, { move: { name: 'quick-attack' } }],
+      types: [{ slot: 1, type: { name: 'electric' } }],
     }),
     { status: 200 },
   )) as unknown as typeof fetch
@@ -25,5 +26,6 @@ test('getPokemon maps PokeAPI stat names onto the abbreviated stat keys', async 
   expect(p.name).toBe('pikachu')
   expect(p.stats).toEqual({ hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90 })
   expect(p.moves).toEqual(['thunderbolt', 'quick-attack'])
+  expect(p.types).toEqual(['electric'])
   expect(p.cryUrl).toBe('/assets/cries/latest/25.ogg')
 })

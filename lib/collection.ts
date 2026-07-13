@@ -35,7 +35,8 @@ export async function addCard(db: Db, card: TcgCard, photoPath: string | null, g
       const p = await getPokemon(dexId)
       db.insert(pokemonCache).values({
         dexId, name: p.name, statsJson: JSON.stringify(p.stats),
-        movesJson: JSON.stringify(p.moves), cryUrl: p.cryUrl,
+        movesJson: JSON.stringify(p.moves), typesJson: JSON.stringify(p.types ?? []),
+        cryUrl: p.cryUrl,
       }).run()
     } catch (e) {
       console.warn(`pokemonCache fetch failed for #${dexId}`, e)
@@ -52,4 +53,27 @@ export function listCards(db: Db) {
       .orderBy(desc(priceSnapshots.fetchedAt)).all()[0]
     return { ...c, pokedexNumbers: JSON.parse(c.pokedexNumbers) as number[], latestPrice: snap?.market ?? null }
   })
+}
+
+const parseJson = <T,>(raw: string | null, fallback: T): T => {
+  if (!raw) return fallback
+  try { return JSON.parse(raw) as T } catch { return fallback }
+}
+
+/** 收藏內所有寶可夢的快取資料（供選角畫面組出戰定義） */
+export function listCollectionPokemon(db: Db): CachedPokemon[] {
+  const collected = new Set<number>()
+  for (const c of db.select({ pokedexNumbers: cards.pokedexNumbers }).from(cards).all()) {
+    for (const dex of parseJson<number[]>(c.pokedexNumbers, [])) collected.add(dex)
+  }
+  return db.select().from(pokemonCache).all()
+    .filter((r) => collected.has(r.dexId))
+    .map((r) => ({
+      dexId: r.dexId,
+      name: r.name,
+      stats: parseJson(r.statsJson, { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }),
+      moves: parseJson<string[]>(r.movesJson, []),
+      types: parseJson<string[]>(r.typesJson, []),
+      cryUrl: r.cryUrl,
+    }))
 }

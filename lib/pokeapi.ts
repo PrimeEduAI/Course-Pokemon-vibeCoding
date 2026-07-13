@@ -2,6 +2,8 @@ export interface CachedPokemon {
   dexId: number; name: string
   stats: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number }
   moves: string[]
+  /** 屬性名（小寫英文，slot 順序） */
+  types: string[]
   cryUrl: string | null
 }
 
@@ -22,6 +24,7 @@ export async function getPokemon(dexId: number, fetcher: typeof fetch = fetch): 
   return {
     dexId, name: p.name, stats,
     moves: p.moves.slice(0, 40).map((m: { move: { name: string } }) => m.move.name),
+    types: (p.types ?? []).map((t: { type: { name: string } }) => t.type.name),
     cryUrl: `/assets/cries/latest/${dexId}.ogg`, // 已下載到本地
   }
 }

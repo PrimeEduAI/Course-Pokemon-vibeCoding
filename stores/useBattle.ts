@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { CHARIZARD, MOVES, PIKACHU, type MoveId } from '@/lib/battle/moves'
+import type { MoveDef } from '@/lib/battle/moves'
+import { SPECIES, toFighter, type FighterDef } from '@/lib/battle/species'
 import { canFire } from '@/lib/battle/cooldown'
 import { resetWorld } from './battleWorld'
 
@@ -16,7 +17,7 @@ export interface DamagePopup {
 
 export interface ProjectileState {
   id: number
-  moveId: MoveId
+  move: MoveDef
   owner: 'player' | 'enemy'
   origin: [number, number, number]
   dir: [number, number, number]
@@ -39,13 +40,19 @@ const MAX_PROJECTILES = 4
 
 let uid = 1
 
+/** 未 configure 前的預設對戰組合（皮卡丘 vs 噴火龍） */
+const DEFAULT_PLAYER = toFighter(SPECIES[25])
+const DEFAULT_ENEMY = toFighter(SPECIES[6])
+
 interface BattleState {
+  playerFighter: FighterDef
+  enemyFighter: FighterDef
   playerHp: number
   playerMaxHp: number
   enemyHp: number
   enemyMaxHp: number
   phase: Phase
-  /** 玩家招式 lastFiredAt（performance.now() 毫秒） */
+  /** 玩家招式 lastFiredAt（performance.now() 毫秒），鍵 = move.id */
   cooldowns: Record<string, number>
   dashLastAt: number
   dashingUntil: number
@@ -56,7 +63,10 @@ interface BattleState {
   fx: BurstFx[]
   resetNonce: number
 
-  tryFire: (moveId: MoveId, now: number) => boolean
+  /** 選角完成 / 進場：設定雙方出戰者並重開一場乾淨的戰鬥 */
+  configure: (player: FighterDef, enemy: FighterDef) => void
+  /** slot 0 = 近戰（Z）、1 = 投射（X） */
+  tryFire: (slot: 0 | 1, now: number) => boolean
   tryDash: (now: number) => boolean
   isInvulnerable: (now: number) => boolean
   dealDamageToEnemy: (amount: number) => void
@@ -67,15 +77,18 @@ interface BattleState {
   removeProjectile: (id: number) => void
   addFx: (f: Omit<BurstFx, 'id' | 'at'>) => void
   removeFx: (id: number) => void
+  /** 再戰：保留目前出戰組合 */
   reset: () => void
 }
 
-export const useBattle = create<BattleState>((set, get) => ({
-  playerHp: PIKACHU.maxHp,
-  playerMaxHp: PIKACHU.maxHp,
-  enemyHp: CHARIZARD.maxHp,
-  enemyMaxHp: CHARIZARD.maxHp,
-  phase: 'fighting',
+const freshRound = (player: FighterDef, enemy: FighterDef) => ({
+  playerFighter: player,
+  enemyFighter: enemy,
+  playerHp: player.maxHp,
+  playerMaxHp: player.maxHp,
+  enemyHp: enemy.maxHp,
+  enemyMaxHp: enemy.maxHp,
+  phase: 'fighting' as Phase,
   cooldowns: {},
   dashLastAt: -Infinity,
   dashingUntil: 0,
@@ -84,14 +97,23 @@ export const useBattle = create<BattleState>((set, get) => ({
   popups: [],
   projectiles: [],
   fx: [],
+})
+
+export const useBattle = create<BattleState>((set, get) => ({
+  ...freshRound(DEFAULT_PLAYER, DEFAULT_ENEMY),
   resetNonce: 0,
 
-  tryFire: (moveId, now) => {
+  configure: (player, enemy) => {
+    resetWorld()
+    set((s) => ({ ...freshRound(player, enemy), resetNonce: s.resetNonce + 1 }))
+  },
+
+  tryFire: (slot, now) => {
     const s = get()
     if (s.phase !== 'fighting') return false
-    const move = MOVES[moveId]
-    if (!canFire(s.cooldowns[moveId] ?? 0, move.cooldownMs, now)) return false
-    set({ cooldowns: { ...s.cooldowns, [moveId]: now } })
+    const move = s.playerFighter.moves[slot]
+    if (!canFire(s.cooldowns[move.id] ?? 0, move.cooldownMs, now)) return false
+    set({ cooldowns: { ...s.cooldowns, [move.id]: now } })
     return true
   },
 
@@ -134,20 +156,7 @@ export const useBattle = create<BattleState>((set, get) => ({
 
   reset: () => {
     resetWorld()
-    set((s) => ({
-      playerHp: PIKACHU.maxHp,
-      enemyHp: CHARIZARD.maxHp,
-      phase: 'fighting',
-      cooldowns: {},
-      dashLastAt: -Infinity,
-      dashingUntil: 0,
-      lastPlayerHitAt: -Infinity,
-      lastEnemyHitAt: -Infinity,
-      popups: [],
-      projectiles: [],
-      fx: [],
-      resetNonce: s.resetNonce + 1,
-    }))
+    set((s) => ({ ...freshRound(s.playerFighter, s.enemyFighter), resetNonce: s.resetNonce + 1 }))
   },
 }))
 

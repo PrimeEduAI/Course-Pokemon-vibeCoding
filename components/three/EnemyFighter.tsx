@@ -3,7 +3,6 @@ import { useFrame } from '@react-three/fiber'
 import { RigidBody, CapsuleCollider, type RapierRigidBody } from '@react-three/rapier'
 import { useEffect, useRef } from 'react'
 import { Group, Vector3 } from 'three'
-import { MOVES } from '@/lib/battle/moves'
 import { canFire } from '@/lib/battle/cooldown'
 import { useBattle } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
@@ -18,6 +17,8 @@ const ATTACK_RANGE = 6
 const PUNCH_RANGE = 3.2
 const REACTION_MS = 400
 const HOVER_Y = 1.6
+/** 陸戰型：capsule 半高（0.65+0.7）→ 靜置中心高度 */
+const GROUND_Y = 1.35
 
 const toPlayer = new Vector3()
 const aim = new Vector3()
@@ -28,7 +29,7 @@ interface AiState {
   nextDecisionAt: number
   /** 全域出招間隔：任何攻擊後至少隔 1.5s，避免連續拳擊瞬殺 */
   nextAttackAt: number
-  cooldowns: { firePunch: number; flamethrower: number }
+  cooldowns: { melee: number; projectile: number }
   preferPunch: boolean
   lungeUntil: number
   punchAt: number
@@ -39,14 +40,18 @@ interface AiState {
   koT: number
 }
 
-export default function EnemyCharizard() {
+/** 世代 BOSS AI：招式 / 體型 / 飛行姿態全部由 enemyFighter 定義驅動 */
+export default function EnemyFighter() {
+  const boss = useBattle((s) => s.enemyFighter)
+  const flying = boss.types.includes('flying')
+  const spawnY = flying ? ENEMY_SPAWN[1] : GROUND_Y
   const body = useRef<RapierRigidBody>(null)
   const visual = useRef<Group>(null)
   const ai = useRef<AiState>({
     mode: 'approach',
     nextDecisionAt: 0,
     nextAttackAt: 0,
-    cooldowns: { firePunch: 0, flamethrower: 0 },
+    cooldowns: { melee: 0, projectile: 0 },
     preferPunch: true,
     lungeUntil: 0,
     punchAt: 0,
@@ -63,20 +68,20 @@ export default function EnemyCharizard() {
 
   useEffect(() => {
     if (!body.current) return
-    body.current.setTranslation({ x: ENEMY_SPAWN[0], y: ENEMY_SPAWN[1], z: ENEMY_SPAWN[2] }, true)
+    body.current.setTranslation({ x: ENEMY_SPAWN[0], y: spawnY, z: ENEMY_SPAWN[2] }, true)
     body.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
     const a = ai.current
     a.mode = 'approach'
     a.nextDecisionAt = performance.now() + REACTION_MS
     a.nextAttackAt = performance.now() + 2000 // 開場緩衝
-    a.cooldowns = { firePunch: 0, flamethrower: 0 }
+    a.cooldowns = { melee: 0, projectile: 0 }
     a.punchPending = false
     a.koT = 0
     if (visual.current) {
       visual.current.rotation.set(0, 0, 0)
       visual.current.position.y = 0
     }
-  }, [resetNonce])
+  }, [resetNonce, spawnY])
 
   useFrame((_, dt) => {
     if (!body.current || !visual.current) return
@@ -85,6 +90,8 @@ export default function EnemyCharizard() {
     const a = ai.current
     const p = body.current.translation()
     battleWorld.enemyPos.set(p.x, p.y, p.z)
+    const melee = boss.moves[0]
+    const projectile = boss.moves[1]
 
     // KO：翻倒下沉
     if (st.phase === 'victory') {
@@ -119,24 +126,24 @@ export default function EnemyCharizard() {
         a.mode = 'approach'
       } else {
         a.mode = 'attack'
-        // 交替出招：近距離火焰拳，否則噴射火焰；全域間隔避免連拳瞬殺
+        // 交替出招：近距離用近戰，否則投射；全域間隔避免連拳瞬殺
         if (now >= a.nextAttackAt) {
-          const punchReady = dist <= PUNCH_RANGE && canFire(a.cooldowns.firePunch, MOVES.firePunch.cooldownMs, now)
-          const flameReady = canFire(a.cooldowns.flamethrower, MOVES.flamethrower.cooldownMs, now)
-          if (punchReady && (a.preferPunch || !flameReady)) {
-            a.cooldowns.firePunch = now
+          const punchReady = dist <= PUNCH_RANGE && canFire(a.cooldowns.melee, melee.cooldownMs, now)
+          const projReady = canFire(a.cooldowns.projectile, projectile.cooldownMs, now)
+          if (punchReady && (a.preferPunch || !projReady)) {
+            a.cooldowns.melee = now
             a.preferPunch = false
             a.nextAttackAt = now + 1500
             a.lungeUntil = now + 220
             a.punchAt = now + 260
             a.punchPending = true
-          } else if (flameReady) {
-            a.cooldowns.flamethrower = now
+          } else if (projReady) {
+            a.cooldowns.projectile = now
             a.preferPunch = true
             a.nextAttackAt = now + 1500
             aim.copy(battleWorld.playerPos).sub(battleWorld.enemyPos).normalize()
             st.spawnProjectile({
-              moveId: 'flamethrower',
+              move: projectile,
               owner: 'enemy',
               origin: [p.x + aim.x * 1.1, p.y + 0.4, p.z + aim.z * 1.1],
               dir: [aim.x, aim.y, aim.z],
@@ -146,14 +153,14 @@ export default function EnemyCharizard() {
       }
     }
 
-    // 火焰拳結算：突進尾端判定
+    // 近戰結算：突進尾端判定
     if (a.punchPending && now >= a.punchAt) {
       a.punchPending = false
       const d = battleWorld.playerPos.distanceTo(battleWorld.enemyPos)
-      if (d <= (MOVES.firePunch.range ?? 2.6) + 0.6 && !st.isInvulnerable(now)) {
+      if (d <= (melee.range ?? 2.6) + 0.6 && !st.isInvulnerable(now)) {
         hitPos.copy(battleWorld.playerPos)
-        hitPlayer(MOVES.firePunch, hitPos)
-        st.addFx({ kind: 'burst', pos: [hitPos.x, hitPos.y + 0.3, hitPos.z], color: '#ffab5e', angle: 0, scale: 1 })
+        hitPlayer(melee, hitPos)
+        st.addFx({ kind: 'burst', pos: [hitPos.x, hitPos.y + 0.3, hitPos.z], color: melee.color, angle: 0, scale: 1 })
       }
     }
 
@@ -164,9 +171,9 @@ export default function EnemyCharizard() {
       a.knockUntil = now + 130
     }
 
-    // 移動：懸浮 + 模式速度
+    // 移動：飛行型懸浮補間、陸戰型貼地（重力管 y）+ 模式速度
     const hoverTarget = HOVER_Y + Math.sin(now * 0.0018) * 0.18
-    const vy = (hoverTarget - p.y) * 4
+    const vy = flying ? (hoverTarget - p.y) * 4 : body.current.linvel().y
     if (now < a.knockUntil) {
       body.current.setLinvel({ x: a.knockVel.x, y: vy, z: a.knockVel.z }, true)
     } else if (now < a.lungeUntil) {
@@ -184,11 +191,18 @@ export default function EnemyCharizard() {
   })
 
   return (
-    <RigidBody ref={body} colliders={false} lockRotations gravityScale={0} position={ENEMY_SPAWN}>
+    <RigidBody
+      key={`${boss.dexId}-${flying ? 'air' : 'ground'}`}
+      ref={body}
+      colliders={false}
+      lockRotations
+      gravityScale={flying ? 0 : 1}
+      position={[ENEMY_SPAWN[0], spawnY, ENEMY_SPAWN[2]]}
+    >
       <CapsuleCollider args={[0.65, 0.7]} />
       <group ref={visual}>
         <group position={[0, -1.35, 0]}>
-          <PokemonRenderable dexId={6} mode={mode} facing="front" targetHeight={2.2} arenaGen={arenaGen} entity="enemy" />
+          <PokemonRenderable dexId={boss.dexId} mode={mode} facing="front" targetHeight={boss.targetHeight} arenaGen={arenaGen} entity="enemy" />
         </group>
       </group>
     </RigidBody>

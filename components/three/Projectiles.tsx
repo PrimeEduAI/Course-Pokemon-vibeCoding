@@ -1,8 +1,7 @@
 'use client'
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
-import { AdditiveBlending, Group, Vector3 } from 'three'
-import { MOVES, type MoveDef } from '@/lib/battle/moves'
+import { AdditiveBlending, Color, Group, Vector3 } from 'three'
 import { useBattle, type ProjectileState } from '@/stores/useBattle'
 import { battleWorld } from '@/stores/battleWorld'
 import { hitEnemy, hitPlayer } from './combat'
@@ -10,17 +9,19 @@ import { getGlowTexture } from './glowTexture'
 
 const HIT_RADIUS = 1.2
 
-const STYLE = {
-  thunderbolt: { color: '#ffe95c', core: '#fffbe0', size: 0.24, light: 9 },
-  flamethrower: { color: '#ff8a3d', core: '#ffd9a8', size: 0.3, light: 8 },
-  quickAttack: { color: '#ffffff', core: '#ffffff', size: 0.2, light: 4 },
-  firePunch: { color: '#ff8a3d', core: '#ffd9a8', size: 0.2, light: 4 },
-} as const
+/** 彈體核心色：move.color 往白拉亮 */
+const coreOf = (hex: string) => `#${new Color(hex).lerp(new Color('#ffffff'), 0.65).getHexString()}`
 
 function Orb({ p }: { p: ProjectileState }) {
   const group = useRef<Group>(null)
-  const move: MoveDef = MOVES[p.moveId]
-  const style = STYLE[p.moveId]
+  const move = p.move
+  // 視覺樣式由招式資料驅動（威力越高，彈體/光暈越大）
+  const style = useMemo(() => ({
+    color: move.color,
+    core: coreOf(move.color),
+    size: 0.2 + Math.min(0.14, move.power * 0.001),
+    light: move.power >= 90 ? 9 : 7,
+  }), [move])
   // 每顆彈體一次性配置（非每幀）
   const sim = useMemo(() => ({
     pos: new Vector3(...p.origin),
