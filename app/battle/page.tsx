@@ -226,7 +226,7 @@ export default function BattlePage() {
 
         {/* 操作提示 */}
         <div className={styles.hint}>
-          <span className={styles.hintKeys}>← ↑ ↓ →</span> 移動 · <span className={styles.hintKeys}>Z X</span> 技能 · <span className={styles.hintKeys}>C</span> 疾走
+          <span className={styles.hintKeys}>← ↑ ↓ →</span> 移動 · <span className={styles.hintKeys}>Z X</span> 技能 · <span className={styles.hintKeys}>C</span> 疾走 · <span className={styles.hintKeys}>滑鼠拖曳</span> 轉視角 · <span className={styles.hintKeys}>滾輪</span> 縮放 · <span className={styles.hintKeys}>V</span> 復位
         </div>
 
         {/* 勝負結算 */}

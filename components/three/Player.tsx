@@ -4,7 +4,8 @@ import { useFrame } from '@react-three/fiber'
 import { RigidBody, CapsuleCollider, type RapierRigidBody } from '@react-three/rapier'
 import { useEffect, useRef } from 'react'
 import { Group, Vector3 } from 'three'
-import { dirFromKeys, type KeyState } from '@/lib/movement'
+import { dirFromKeys, rotateDirByYaw, type KeyState } from '@/lib/movement'
+import { useOrbitControls, ANCHOR_Y } from './CameraRig'
 import { MOVES } from '@/lib/battle/moves'
 import { useBattle } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
@@ -43,6 +44,7 @@ export default function Player({ dexId }: { dexId: number }) {
   const koT = useRef(0)
   const resetNonce = useBattle((s) => s.resetNonce)
   const mode = useStyleMode((s) => s.mode)
+  const orbit = useOrbitControls()
   const arenaId = useArena((s) => s.arenaId)
   const arenaGen = ARENAS.find((a) => a.id === arenaId)?.gen
 
@@ -66,6 +68,8 @@ export default function Player({ dexId }: { dexId: number }) {
     const keys = getKeys() as BattleKeys
     const p = body.current.translation()
     battleWorld.playerPos.set(p.x, p.y, p.z)
+    orbit.update(dt) // 推進 V 復位補間
+    const cam = orbit.state.current
 
     // KO：倒下 + 下沉
     if (st.phase === 'defeat') {
@@ -75,7 +79,8 @@ export default function Player({ dexId }: { dexId: number }) {
       visual.current.rotation.z = k * (Math.PI / 2) * 0.92
       visual.current.position.y = -k * 0.55
     } else if (st.phase === 'fighting') {
-      const [mx, mz] = dirFromKeys(keys)
+      // 相機相對移動：以 (yaw - π) 旋轉輸入，讓「上」永遠遠離鏡頭；預設 yaw=π 時為單位運算（同改動前）
+      const [mx, mz] = rotateDirByYaw(...dirFromKeys(keys), cam.yaw - Math.PI)
       const moving = mx !== 0 || mz !== 0
       if (moving) battleWorld.playerFacing = Math.atan2(mx, mz)
       const facing = battleWorld.playerFacing
@@ -152,10 +157,19 @@ export default function Player({ dexId }: { dexId: number }) {
       body.current.setLinvel({ x: 0, y: body.current.linvel().y, z: 0 }, true)
     }
 
-    // 鏡頭跟隨：更近更低（過肩視角），凸顯主角
-    camTarget.set(p.x, p.y + 2.45, p.z + 5.0)
-    camera.position.lerp(camTarget, 0.09)
-    camera.lookAt(p.x, p.y + 1.05, p.z - 0.6)
+    // 鏡頭：繞角色錨點 (p.x, p.y+ANCHOR_Y, p.z) 的球面軌道；yaw=π 時精準回到改動前的過肩視角
+    const ax = p.x
+    const ay = p.y + ANCHOR_Y
+    const az = p.z
+    const cp = Math.cos(cam.pitch)
+    const sp = Math.sin(cam.pitch)
+    camTarget.set(
+      ax - Math.sin(cam.yaw) * cp * cam.dist,
+      Math.max(0.4, ay + sp * cam.dist), // 夾住 y≥0.4，避免鏡頭鑽到地板下
+      az - Math.cos(cam.yaw) * cp * cam.dist,
+    )
+    camera.position.lerp(camTarget, cam.dragging ? 0.14 : 0.09) // 拖曳時反應更快
+    camera.lookAt(ax, ay, az)
     // 受擊微震
     const sinceHit = now - st.lastPlayerHitAt
     if (sinceHit < 220) {

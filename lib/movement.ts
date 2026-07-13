@@ -12,3 +12,13 @@ export function dirFromKeys(k: KeyState): [number, number] {
 export function idleBob(t: number, baseY: number, amplitude: number): number {
   return baseY + Math.sin(t * 2.4) * amplitude
 }
+
+/**
+ * 依鏡頭 yaw 旋轉 XZ 平面輸入向量，使「前進」永遠是遠離鏡頭的方向。
+ * yaw 0 為單位運算；配合 Player 以 (yaw - π) 呼叫，讓預設視角下的行為與改動前完全一致。
+ */
+export function rotateDirByYaw(x: number, z: number, yaw: number): [number, number] {
+  const c = Math.cos(yaw)
+  const s = Math.sin(yaw)
+  return [x * c + z * s, -x * s + z * c]
+}
