@@ -1,6 +1,6 @@
-/** 世代戰場註冊表：Gen 1–8。目前可出戰 gen1 / gen8，其餘鎖定。 */
+/** 世代戰場註冊表：Gen 1–8。 */
 
-export type ArenaId = 'gen1' | 'gen8'
+export type ArenaId = 'gen1' | 'gen2' | 'gen3' | 'gen4' | 'gen5' | 'gen6' | 'gen7' | 'gen8'
 
 export type FieldType = 'grass' | 'rock' | 'water' | 'ice'
 

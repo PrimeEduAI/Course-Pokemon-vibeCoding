@@ -14,7 +14,26 @@ import DamagePopups from './DamagePopups'
 import Gen8Wyndon from './arenas/Gen8Wyndon'
 import Gen1Indigo from './arenas/Gen1Indigo'
 import Gen1Field from './arenas/Gen1Field'
+import Gen2Silver, { Gen2SilverFloor } from './arenas/Gen2Silver'
+import Gen3EverGrande, { Gen3EverGrandeFloor } from './arenas/Gen3EverGrande'
+import Gen4LilyValley, { Gen4LilyValleyFloor } from './arenas/Gen4LilyValley'
+import Gen5Vertress, { Gen5VertressFloor } from './arenas/Gen5Vertress'
+import Gen6Lumiose, { Gen6LumioseFloor } from './arenas/Gen6Lumiose'
+import Gen7Manalo, { Gen7ManaloFloor } from './arenas/Gen7Manalo'
 import type { ArenaId, FieldType } from './arenas/types'
+import type { ComponentType } from 'react'
+
+/** 世代 → 布景/地板 對照（合約：Scenery 無 props；Floor 收 fieldType，碰撞 40×24 頂面 y=0） */
+const SCENERY: Record<ArenaId, ComponentType> = {
+  gen1: Gen1Indigo, gen2: Gen2Silver, gen3: Gen3EverGrande, gen4: Gen4LilyValley,
+  gen5: Gen5Vertress, gen6: Gen6Lumiose, gen7: Gen7Manalo, gen8: Gen8Wyndon,
+}
+const FLOORS: Record<ArenaId, ComponentType<{ fieldType?: FieldType | null }>> = {
+  gen1: ({ fieldType }) => <Gen1Field fieldType={fieldType ?? 'grass'} />,
+  gen2: Gen2SilverFloor, gen3: Gen3EverGrandeFloor, gen4: Gen4LilyValleyFloor,
+  gen5: Gen5VertressFloor, gen6: Gen6LumioseFloor, gen7: Gen7ManaloFloor,
+  gen8: () => <ArenaFloor />,
+}
 
 const keyMap = [
   { name: 'forward', keys: ['ArrowUp'] },
@@ -35,16 +54,18 @@ interface BattleSceneProps {
 
 export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
   const showStats = typeof window !== 'undefined' && window.location.search.includes('stats')
+  const Scenery = SCENERY[arena]
+  const Floor = FLOORS[arena]
   return (
     <KeyboardControls map={keyMap}>
       <Canvas shadows camera={{ position: [0, 6, 12], fov: 50 }} dpr={[1, 2]}>
         {showStats && <Stats />}
         <Suspense fallback={null}>
           {/* 世代戰場（天空/光照/看台/布景） */}
-          {arena === 'gen1' ? <Gen1Indigo /> : <Gen8Wyndon />}
+          <Scenery />
 
           <Physics>
-            {arena === 'gen1' ? <Gen1Field fieldType={fieldType ?? 'grass'} /> : <ArenaFloor />}
+            <Floor fieldType={fieldType} />
             <Player dexId={25} />
             {/* 對手：噴火龍 AI */}
             <EnemyCharizard />

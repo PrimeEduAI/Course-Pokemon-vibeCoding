@@ -23,12 +23,28 @@ function pickFieldType(): FieldType {
   return FIELD_TYPES[(Math.random() * FIELD_TYPES.length) | 0]
 }
 
+const ARENA_IDS: ArenaId[] = ['gen1', 'gen2', 'gen3', 'gen4', 'gen5', 'gen6', 'gen7', 'gen8']
+
+/** dev 後門：?arena=gen5 直接進指定戰場（跳過選場畫面，含未解鎖） */
+function initialArena(): { arenaId: ArenaId | null; fieldType: FieldType | null } {
+  if (typeof window !== 'undefined') {
+    const q = new URLSearchParams(window.location.search).get('arena')
+    if (q && (ARENA_IDS as string[]).includes(q)) {
+      const id = q as ArenaId
+      const usesField = id === 'gen1' || id === 'gen2' || id === 'gen3'
+      return { arenaId: id, fieldType: usesField ? pickFieldType() : null }
+    }
+  }
+  return { arenaId: null, fieldType: null }
+}
+
 export const useArena = create<ArenaState>((set) => ({
-  arenaId: null,
-  fieldType: null,
+  ...initialArena(),
   choose: (id) => {
     useBattle.getState().reset() // 換場即重開一場乾淨的戰鬥
-    set({ arenaId: id, fieldType: id === 'gen1' ? pickFieldType() : null })
+    // gen1 四場地隨機；gen2 機械換場、gen3 戰中換場也吃 fieldType（各自場地元件消費）
+    const usesField = id === 'gen1' || id === 'gen2' || id === 'gen3'
+    set({ arenaId: id, fieldType: usesField ? pickFieldType() : null })
   },
   clear: () => set({ arenaId: null, fieldType: null }),
 }))
