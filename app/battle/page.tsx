@@ -260,6 +260,8 @@ export default function BattlePage() {
         e.preventDefault()
         useStyleMode.getState().cycle()
       }
+      // 空白鍵 = 疾走別名：擋掉捲動與焦點按鈕誤觸（例如結算後按空白鍵重按到「再戰」）
+      if (e.code === 'Space' || e.key === ' ') e.preventDefault()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -363,14 +365,14 @@ export default function BattlePage() {
 
         {/* 技能欄 */}
         <div className={styles.slots}>
-          <MoveSlot keyCap="Q" name={meleeMove.nameZh} progress={cooldownProgress(cooldowns[meleeMove.id] ?? 0, meleeMove.cooldownMs, now)} />
-          <MoveSlot keyCap="E" name={projMove.nameZh} progress={cooldownProgress(cooldowns[projMove.id] ?? 0, projMove.cooldownMs, now)} />
-          <MoveSlot keyCap="F" name="疾走" progress={cooldownProgress(dashLastAt === -Infinity ? 0 : dashLastAt, DASH_COOLDOWN_MS, now)} />
+          <MoveSlot keyCap="J" name={meleeMove.nameZh} progress={cooldownProgress(cooldowns[meleeMove.id] ?? 0, meleeMove.cooldownMs, now)} />
+          <MoveSlot keyCap="K" name={projMove.nameZh} progress={cooldownProgress(cooldowns[projMove.id] ?? 0, projMove.cooldownMs, now)} />
+          <MoveSlot keyCap="L" name="疾走" progress={cooldownProgress(dashLastAt === -Infinity ? 0 : dashLastAt, DASH_COOLDOWN_MS, now)} />
         </div>
 
         {/* 操作提示 */}
         <div className={styles.hint}>
-          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>Q E</span> 技能 · <span className={styles.hintKeys}>F</span> 疾走 · <span className={styles.hintKeys}>滑鼠拖曳</span> 轉視角 · <span className={styles.hintKeys}>滾輪</span> 縮放 · <span className={styles.hintKeys}>V</span> 復位
+          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>J K</span> 技能 · <span className={styles.hintKeys}>L / 空白鍵</span> 疾走 · 鏡頭自動鎖定對手
         </div>
 
         {/* 勝負結算 */}

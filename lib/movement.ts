@@ -22,3 +22,25 @@ export function rotateDirByYaw(x: number, z: number, yaw: number): [number, numb
   const s = Math.sin(yaw)
   return [x * c + z * s, -x * s + z * c]
 }
+
+/** (fromX,fromZ) 指向 (toX,toZ) 的朝向角（與 playerFacing 同慣例：方向向量 = (sin yaw, cos yaw)） */
+export function yawBetween(fromX: number, fromZ: number, toX: number, toZ: number): number {
+  return Math.atan2(toX - fromX, toZ - fromZ)
+}
+
+/**
+ * 鎖定視角的移動映射：W = 朝敵人、S = 遠離、A/D = 繞敵側移。
+ * dirFromKeys 的「前」是 (0,-1)，因此以 (yawToEnemy + π) 旋轉即可讓前進對準敵人。
+ */
+export function lockOnDir(x: number, z: number, yawToEnemy: number): [number, number] {
+  return rotateDirByYaw(x, z, yawToEnemy + Math.PI)
+}
+
+/** 角度插值（取最短路徑），t ∈ [0,1] */
+export function lerpAngle(a: number, b: number, t: number): number {
+  const TWO_PI = Math.PI * 2
+  let d = (b - a) % TWO_PI
+  if (d > Math.PI) d -= TWO_PI
+  if (d < -Math.PI) d += TWO_PI
+  return a + d * t
+}

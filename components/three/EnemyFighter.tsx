@@ -93,15 +93,22 @@ export default function EnemyFighter() {
     const melee = boss.moves[0]
     const projectile = boss.moves[1]
 
-    // KO：翻倒下沉
+    // KO：翻倒下沉（模型自帶 down01 片段時交給骨骼動畫，剛體只負責降到地面）
     if (st.phase === 'victory') {
-      body.current.setLinvel({ x: 0, y: a.koT >= 1 ? 0 : -0.5, z: 0 }, true)
-      a.koT = Math.min(1, a.koT + dt / 1.2)
-      visual.current.rotation.z = a.koT * (Math.PI / 2) * 0.95
-      visual.current.position.y = -a.koT * 0.75
+      battleWorld.enemyMotion.state = 'ko'
+      if (battleWorld.enemyMotion.hasKoClip) {
+        const vy = flying ? (p.y > GROUND_Y ? -1.0 : 0) : body.current.linvel().y
+        body.current.setLinvel({ x: 0, y: vy, z: 0 }, true)
+      } else {
+        body.current.setLinvel({ x: 0, y: a.koT >= 1 ? 0 : -0.5, z: 0 }, true)
+        a.koT = Math.min(1, a.koT + dt / 1.2)
+        visual.current.rotation.z = a.koT * (Math.PI / 2) * 0.95
+        visual.current.position.y = -a.koT * 0.75
+      }
       return
     }
     if (st.phase !== 'fighting') {
+      battleWorld.enemyMotion.state = 'idle'
       body.current.setLinvel({ x: 0, y: 0, z: 0 }, true)
       return
     }
@@ -137,10 +144,12 @@ export default function EnemyFighter() {
             a.lungeUntil = now + 220
             a.punchAt = now + 260
             a.punchPending = true
+            battleWorld.enemyMotion.attackAt = now // 骨骼動畫：出拳當前搖
           } else if (projReady) {
             a.cooldowns.projectile = now
             a.preferPunch = true
             a.nextAttackAt = now + 1500
+            battleWorld.enemyMotion.rangeAttackAt = now
             aim.copy(battleWorld.playerPos).sub(battleWorld.enemyPos).normalize()
             st.spawnProjectile({
               move: projectile,
@@ -174,20 +183,26 @@ export default function EnemyFighter() {
     // 移動：飛行型懸浮補間、陸戰型貼地（重力管 y）+ 模式速度
     const hoverTarget = HOVER_Y + Math.sin(now * 0.0018) * 0.18
     const vy = flying ? (hoverTarget - p.y) * 4 : body.current.linvel().y
+    let movingNow = false
     if (now < a.knockUntil) {
       body.current.setLinvel({ x: a.knockVel.x, y: vy, z: a.knockVel.z }, true)
     } else if (now < a.lungeUntil) {
       body.current.setLinvel({ x: toPlayer.x * 9, y: vy, z: toPlayer.z * 9 }, true)
+      movingNow = true
     } else if (a.mode === 'retreat' && now < a.retreatUntil) {
       body.current.setLinvel({ x: -toPlayer.x * 4, y: vy, z: -toPlayer.z * 4 }, true)
+      movingNow = true
     } else if (a.mode === 'approach' || dist > ATTACK_RANGE) {
       const spd = distXZ > 2.6 ? APPROACH_SPEED : 0
       body.current.setLinvel({ x: toPlayer.x * spd, y: vy, z: toPlayer.z * spd }, true)
+      movingNow = spd > 0
     } else {
       // 攻擊模式：保持間距（別貼進鏡頭），緩慢逼近
       const spd = distXZ > 2.7 ? 1.4 : 0
       body.current.setLinvel({ x: toPlayer.x * spd, y: vy, z: toPlayer.z * spd }, true)
+      movingNow = spd > 0
     }
+    battleWorld.enemyMotion.state = movingNow ? 'move' : 'idle'
   })
 
   return (
@@ -202,7 +217,7 @@ export default function EnemyFighter() {
       <CapsuleCollider args={[0.65, 0.7]} />
       <group ref={visual}>
         <group position={[0, -1.35, 0]}>
-          <PokemonRenderable dexId={boss.dexId} mode={mode} facing="front" targetHeight={boss.targetHeight} arenaGen={arenaGen} entity="enemy" />
+          <PokemonRenderable dexId={boss.dexId} mode={mode} facing="front" targetHeight={boss.targetHeight} arenaGen={arenaGen} entity="enemy" motion={battleWorld.enemyMotion} />
         </group>
       </group>
     </RigidBody>

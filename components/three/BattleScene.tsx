@@ -42,10 +42,10 @@ const keyMap = [
   { name: 'backward', keys: ['KeyS', 's', 'S', 'ArrowDown'] },
   { name: 'left', keys: ['KeyA', 'a', 'A', 'ArrowLeft'] },
   { name: 'right', keys: ['KeyD', 'd', 'D', 'ArrowRight'] },
-  // 技能：Q 近戰 / E 投射 / F 疾走
-  { name: 'attack1', keys: ['KeyQ', 'q', 'Q'] },
-  { name: 'attack2', keys: ['KeyE', 'e', 'E'] },
-  { name: 'dash', keys: ['KeyF', 'f', 'F'] },
+  // 技能（右手區，左手專心 WASD）：J 近戰 / K 投射 / L 或空白鍵 疾走
+  { name: 'attack1', keys: ['KeyJ', 'j', 'J'] },
+  { name: 'attack2', keys: ['KeyK', 'k', 'K'] },
+  { name: 'dash', keys: ['KeyL', 'l', 'L', 'Space', ' '] },
 ]
 
 interface BattleSceneProps {
