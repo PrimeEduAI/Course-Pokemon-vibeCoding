@@ -3,13 +3,15 @@ import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import styles from './battle.module.css'
 import { useBattle, DASH_COOLDOWN_MS } from '@/stores/useBattle'
+import { useArena } from '@/stores/useArena'
+import { ARENAS, FIELD_LABEL, type ArenaId } from '@/components/three/arenas/types'
 import { MOVES } from '@/lib/battle/moves'
 import { cooldownProgress } from '@/lib/battle/cooldown'
 import BattleAudio from '@/components/three/BattleAudio'
 
 const BattleScene = dynamic(() => import('@/components/three/BattleScene'), {
   ssr: false,
-  loading: () => <div className={styles.loading}>載入宮門體育場…</div>,
+  loading: () => <div className={styles.loading}>載入聯盟戰場…</div>,
 })
 
 function hpClass(ratio: number) {
@@ -33,6 +35,45 @@ function MoveSlot({ keyCap, name, progress }: { keyCap: string; name: string; pr
   )
 }
 
+/** 選擇聯盟戰場：Gen 1–8 卡片，僅 gen1 / gen8 可出戰 */
+function ArenaSelect({ onChoose }: { onChoose: (id: ArenaId) => void }) {
+  return (
+    <div className={styles.selectOverlay}>
+      <div className={styles.selectSmall}>POKÉMON LEAGUE · WORLD CIRCUIT</div>
+      <h1 className={styles.selectTitle}>選擇聯盟戰場</h1>
+      <div className={styles.selectGrid}>
+        {ARENAS.map((a) =>
+          a.playable ? (
+            <button
+              key={a.id}
+              className={`${styles.card} ${styles.cardPlayable}`}
+              style={{ '--accent': a.accent } as React.CSSProperties}
+              onClick={() => onChoose(a.id as ArenaId)}
+            >
+              <span className={styles.cardGen}>GEN {a.gen}</span>
+              <span className={styles.cardName}>{a.nameZh}</span>
+              <span className={styles.cardEn}>{a.nameEn}</span>
+              <span className={styles.cardFlavor}>{a.flavor}</span>
+            </button>
+          ) : (
+            <div key={a.id} className={`${styles.card} ${styles.cardLocked}`}>
+              <span className={styles.cardGen}>GEN {a.gen}</span>
+              <span className={styles.cardName}>{a.nameZh}</span>
+              <span className={styles.cardEn}>{a.nameEn}</span>
+              <span className={styles.cardFlavor}>{a.flavor}</span>
+              <span className={styles.lockBadge}>敬請期待</span>
+            </div>
+          ),
+        )}
+      </div>
+      <div className={styles.selectHint}>
+        可出戰：<span className={styles.selectHintHot}>GEN 1 石英高原</span> ·{' '}
+        <span className={styles.selectHintHot}>GEN 8 宮門體育場</span>
+      </div>
+    </div>
+  )
+}
+
 export default function BattlePage() {
   const playerHp = useBattle((s) => s.playerHp)
   const playerMaxHp = useBattle((s) => s.playerMaxHp)
@@ -43,6 +84,11 @@ export default function BattlePage() {
   const dashLastAt = useBattle((s) => s.dashLastAt)
   const lastPlayerHitAt = useBattle((s) => s.lastPlayerHitAt)
   const reset = useBattle((s) => s.reset)
+
+  const arenaId = useArena((s) => s.arenaId)
+  const fieldType = useArena((s) => s.fieldType)
+  const choose = useArena((s) => s.choose)
+  const clearArena = useArena((s) => s.clear)
 
   // 100ms 節拍：驅動冷卻掃描與受擊紅暈
   const [now, setNow] = useState(0)
@@ -55,18 +101,32 @@ export default function BattlePage() {
   const eRatio = enemyHp / enemyMaxHp
   const hitFlash = now - lastPlayerHitAt < 450
 
+  // 未選戰場：只顯示選場畫面（Canvas / 戰鬥 / 鳴叫都尚未開始）
+  if (!arenaId) {
+    return (
+      <div className={styles.wrap}>
+        <ArenaSelect onChoose={choose} />
+      </div>
+    )
+  }
+
+  const arenaDef = ARENAS.find((a) => a.id === arenaId)!
+
   return (
     <div className={styles.wrap}>
-      <BattleScene />
+      <BattleScene arena={arenaId} fieldType={fieldType} />
       <BattleAudio />
       <div className={styles.overlay}>
         {/* 受擊紅暈 */}
         {hitFlash && <div className={styles.hitVignette} />}
 
-        {/* 頂部聯盟橫幅 */}
+        {/* 頂部聯盟橫幅（依戰場） */}
         <div className={styles.banner}>
-          <div className={styles.bannerSmall}>GALAR POKÉMON LEAGUE</div>
-          <div className={styles.bannerMain}>WYNDON STADIUM · 冠軍盃決賽</div>
+          <div className={styles.bannerSmall}>{arenaDef.bannerEn}</div>
+          <div className={styles.bannerMain}>{arenaDef.bannerZh}</div>
+          {arenaId === 'gen1' && fieldType && (
+            <div className={styles.fieldChip} data-field={fieldType}>{FIELD_LABEL[fieldType]}</div>
+          )}
         </div>
 
         {/* 我方出戰 */}
@@ -121,7 +181,10 @@ export default function BattlePage() {
             <div className={phase === 'victory' ? styles.endTitleWin : styles.endTitleLose}>
               {phase === 'victory' ? 'VICTORY 勝利！' : 'DEFEAT'}
             </div>
-            <button className={styles.retryBtn} onClick={reset}>再戰一場</button>
+            <div className={styles.endActions}>
+              <button className={styles.retryBtn} onClick={reset}>再戰一場</button>
+              <button className={styles.changeBtn} onClick={clearArena}>更換戰場</button>
+            </div>
           </div>
         )}
       </div>

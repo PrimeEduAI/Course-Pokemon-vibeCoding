@@ -247,6 +247,156 @@
   box-shadow: 0 0 24px rgba(255, 45, 120, 0.6);
 }
 
+/* 場地型別小徽章（Gen1 四場地） */
+.fieldChip {
+  display: inline-block;
+  margin-top: 7px;
+  padding: 3px 14px;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: #05070f;
+  background: #8ea2ff;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 100%, 0 100%);
+}
+.fieldChip[data-field='grass'] { background: #3ddc84; }
+.fieldChip[data-field='rock'] { background: #d09a5a; }
+.fieldChip[data-field='water'] { background: #4aa3ff; }
+.fieldChip[data-field='ice'] { background: #bfe8ff; }
+
+/* 選擇聯盟戰場 */
+.selectOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 40px 20px;
+  background:
+    radial-gradient(ellipse 90% 65% at 50% -10%, rgba(43, 58, 107, 0.55), transparent 62%),
+    radial-gradient(ellipse 70% 55% at 50% 115%, rgba(255, 45, 120, 0.16), transparent 60%),
+    #05070f;
+  font-family: 'DotGothic16', 'PressStart2P', monospace;
+  color: #f2f2f2;
+  overflow-y: auto;
+}
+.selectSmall {
+  font-family: 'PressStart2P', monospace;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: #29d8ff;
+}
+.selectTitle {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 400;
+  letter-spacing: 10px;
+  text-shadow: 0 0 22px rgba(142, 162, 255, 0.65);
+}
+.selectGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 200px);
+  gap: 16px;
+  margin-top: 10px;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px 16px 16px;
+  min-height: 138px;
+  background: linear-gradient(160deg, rgba(14, 18, 36, 0.94), rgba(8, 10, 22, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+}
+.cardPlayable {
+  cursor: pointer;
+  border-color: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 28%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--accent) 10%, transparent);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.cardPlayable:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 60%, transparent),
+    inset 0 0 24px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.cardPlayable .cardGen { color: var(--accent); }
+.cardLocked {
+  opacity: 0.42;
+  filter: saturate(0.25);
+}
+.cardGen {
+  font-family: 'PressStart2P', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #9aa5c9;
+}
+.cardName {
+  font-size: 21px;
+  letter-spacing: 2px;
+}
+.cardEn {
+  font-family: 'PressStart2P', monospace;
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #8790b5;
+}
+.cardFlavor {
+  margin-top: 6px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #c3cbe8;
+}
+.lockBadge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 3px 8px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #0a0c16;
+  background: #9aa5c9;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+.selectHint {
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: rgba(242, 242, 242, 0.6);
+}
+.selectHintHot {
+  color: #ffd166;
+}
+
+/* 結算按鈕列 */
+.endActions {
+  display: flex;
+  gap: 18px;
+}
+.changeBtn {
+  font-family: 'DotGothic16', monospace;
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(60, 80, 160, 0.85), rgba(35, 48, 105, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 14px 44px;
+  cursor: pointer;
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.changeBtn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 24px rgba(142, 162, 255, 0.6);
+}
+
 /* 操作提示 */
 .hint {
   position: absolute;

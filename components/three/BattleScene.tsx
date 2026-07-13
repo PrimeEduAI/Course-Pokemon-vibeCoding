@@ -1,6 +1,6 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
-import { Environment, KeyboardControls, Stars, Stats } from '@react-three/drei'
+import { KeyboardControls, Stats } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Bloom, EffectComposer, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
@@ -11,11 +11,10 @@ import EnemyCharizard from './EnemyCharizard'
 import Projectiles from './Projectiles'
 import FXLayer from './FXLayer'
 import DamagePopups from './DamagePopups'
-import Stadium from './Stadium'
-import Floodlights from './Floodlights'
-import Jumbotron from './Jumbotron'
-import AdBoards from './AdBoards'
-import LaserShow from './LaserShow'
+import Gen8Wyndon from './arenas/Gen8Wyndon'
+import Gen1Indigo from './arenas/Gen1Indigo'
+import Gen1Field from './arenas/Gen1Field'
+import type { ArenaId, FieldType } from './arenas/types'
 
 const keyMap = [
   { name: 'forward', keys: ['ArrowUp'] },
@@ -28,39 +27,24 @@ const keyMap = [
   { name: 'dash', keys: ['KeyC', 'c', 'C'] },
 ]
 
-export default function BattleScene() {
+interface BattleSceneProps {
+  arena: ArenaId
+  /** gen1 專用：草/岩/水/冰 */
+  fieldType?: FieldType | null
+}
+
+export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
   const showStats = typeof window !== 'undefined' && window.location.search.includes('stats')
   return (
     <KeyboardControls map={keyMap}>
       <Canvas shadows camera={{ position: [0, 6, 12], fov: 50 }} dpr={[1, 2]}>
-        {/* 夜空 */}
         {showStats && <Stats />}
-        <color attach="background" args={['#05070f']} />
-        <fog attach="fog" args={['#05070f', 70, 210]} />
         <Suspense fallback={null}>
-          <Stars radius={280} depth={60} count={3500} factor={5} saturation={0} fade speed={0.5} />
-          {/* 只做反射用的夜景 IBL，不當背景 */}
-          <Environment files="/assets/hdri/shanghai_bund_2k.hdr" environmentIntensity={0.3} />
-
-          {/* 主光：模擬泛光燈的冷白頂光（唯一投影光源） */}
-          <directionalLight
-            position={[18, 32, 12]}
-            intensity={1.3}
-            color="#dfe8ff"
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-            shadow-camera-left={-24}
-            shadow-camera-right={24}
-            shadow-camera-top={20}
-            shadow-camera-bottom={-20}
-            shadow-camera-far={70}
-            shadow-bias={-0.0004}
-          />
-          <hemisphereLight args={['#222c52', '#0a0c12', 0.4]} />
-          <ambientLight intensity={0.1} color="#5a6cc0" />
+          {/* 世代戰場（天空/光照/看台/布景） */}
+          {arena === 'gen1' ? <Gen1Indigo /> : <Gen8Wyndon />}
 
           <Physics>
-            <ArenaFloor />
+            {arena === 'gen1' ? <Gen1Field fieldType={fieldType ?? 'grass'} /> : <ArenaFloor />}
             <Player dexId={25} />
             {/* 對手：噴火龍 AI */}
             <EnemyCharizard />
@@ -70,12 +54,6 @@ export default function BattleScene() {
           <Projectiles />
           <FXLayer />
           <DamagePopups />
-
-          <Stadium />
-          <Floodlights />
-          <Jumbotron />
-          <AdBoards />
-          <LaserShow />
 
           <EffectComposer>
             <Bloom mipmapBlur intensity={0.65} luminanceThreshold={0.78} luminanceSmoothing={0.2} />
