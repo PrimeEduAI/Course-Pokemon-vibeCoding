@@ -1,27 +1,24 @@
 'use client'
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
-import { AdditiveBlending, Color, Group, Vector3 } from 'three'
+import { Group, Quaternion, Vector3 } from 'three'
 import { useBattle, type ProjectileState } from '@/stores/useBattle'
 import { battleWorld } from '@/stores/battleWorld'
 import { hitEnemy, hitPlayer } from './combat'
-import { getGlowTexture } from './glowTexture'
+import { PROJECTILE_VISUALS, resolveVisual } from './moveVisuals'
 
 const HIT_RADIUS = 1.2
+const Z_FORWARD = new Vector3(0, 0, 1)
 
-/** 彈體核心色：move.color 往白拉亮 */
-const coreOf = (hex: string) => `#${new Color(hex).lerp(new Color('#ffffff'), 0.65).getHexString()}`
-
-function Orb({ p }: { p: ProjectileState }) {
+/**
+ * 彈體 = 模擬層（移動 / 命中 / 射程）+ 視覺層（moveVisuals 註冊表依招式分派）。
+ * 視覺元件渲染在定向群組內：+z 即飛行方向。
+ */
+function Projectile({ p }: { p: ProjectileState }) {
   const group = useRef<Group>(null)
   const move = p.move
-  // 視覺樣式由招式資料驅動（威力越高，彈體/光暈越大）
-  const style = useMemo(() => ({
-    color: move.color,
-    core: coreOf(move.color),
-    size: 0.2 + Math.min(0.14, move.power * 0.001),
-    light: move.power >= 90 ? 9 : 7,
-  }), [move])
+  const visualId = useMemo(() => resolveVisual(move), [move])
+  const Visual = PROJECTILE_VISUALS[visualId]
   // 每顆彈體一次性配置（非每幀）
   const sim = useMemo(() => ({
     pos: new Vector3(...p.origin),
@@ -30,9 +27,9 @@ function Orb({ p }: { p: ProjectileState }) {
     traveled: 0,
     done: false,
   }), [p])
-  const glowMap = useMemo(() => getGlowTexture(), [])
+  const quat = useMemo(() => new Quaternion().setFromUnitVectors(Z_FORWARD, sim.dir), [sim])
 
-  useFrame((state, dt) => {
+  useFrame((_, dt) => {
     if (!group.current || sim.done) return
     const st = useBattle.getState()
     const now = performance.now()
@@ -40,8 +37,6 @@ function Orb({ p }: { p: ProjectileState }) {
     sim.pos.addScaledVector(sim.dir, step)
     sim.traveled += step
     group.current.position.copy(sim.pos)
-    const pulse = 1 + Math.sin(state.clock.elapsedTime * 24) * 0.18
-    group.current.scale.setScalar(pulse)
 
     if (st.phase !== 'fighting') {
       sim.done = true
@@ -59,9 +54,10 @@ function Orb({ p }: { p: ProjectileState }) {
         st.addFx({
           kind: 'burst',
           pos: [sim.pos.x, sim.pos.y, sim.pos.z],
-          color: style.color,
+          color: move.color,
           angle: 0,
           scale: 1.25,
+          variant: visualId,
         })
         sim.done = true
         st.removeProjectile(p.id)
@@ -69,9 +65,9 @@ function Orb({ p }: { p: ProjectileState }) {
       }
     }
 
-    // 射程耗盡：熄滅
+    // 射程耗盡：熄滅（小型通用爆閃即可）
     if (sim.traveled >= (move.range ?? 25)) {
-      st.addFx({ kind: 'burst', pos: [sim.pos.x, sim.pos.y, sim.pos.z], color: style.color, angle: 0, scale: 0.4 })
+      st.addFx({ kind: 'burst', pos: [sim.pos.x, sim.pos.y, sim.pos.z], color: move.color, angle: 0, scale: 0.4 })
       sim.done = true
       st.removeProjectile(p.id)
     }
@@ -79,14 +75,9 @@ function Orb({ p }: { p: ProjectileState }) {
 
   return (
     <group ref={group} position={p.origin}>
-      <mesh>
-        <sphereGeometry args={[style.size, 16, 16]} />
-        <meshStandardMaterial color={style.core} emissive={style.color} emissiveIntensity={4} toneMapped={false} />
-      </mesh>
-      <sprite scale={[style.size * 7, style.size * 7, 1]}>
-        <spriteMaterial map={glowMap} color={style.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.85} />
-      </sprite>
-      <pointLight color={style.color} intensity={style.light} distance={7} decay={2} />
+      <group quaternion={quat}>
+        <Visual move={move} />
+      </group>
     </group>
   )
 }
@@ -95,7 +86,7 @@ export default function Projectiles() {
   const projectiles = useBattle((s) => s.projectiles)
   return (
     <>
-      {projectiles.map((p) => <Orb key={p.id} p={p} />)}
+      {projectiles.map((p) => <Projectile key={p.id} p={p} />)}
     </>
   )
 }

@@ -10,7 +10,9 @@ import { useBattle } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
 import { useStyleMode } from '@/stores/useStyleMode'
 import { battleWorld, PLAYER_SPAWN } from '@/stores/battleWorld'
+import { maybeCry, playLaunch, sfxSlash, sfxWhoosh } from '@/lib/sfx'
 import { hitEnemy } from './combat'
+import { slashVariantForType } from './moveVisuals'
 import { ARENAS } from './arenas/types'
 import PokemonRenderable from './renderables/PokemonRenderable'
 
@@ -103,12 +105,14 @@ export default function Player() {
         // 近戰（J）：向面向衝刺 + 弧形斬擊，命中 = 距離內且 ±60° 前方錐角
         lungeUntil.current = now + LUNGE_MS
         motion.attackAt = now
+        sfxSlash()
         st.addFx({
           kind: 'slash',
           pos: [p.x + facingV.x * 1.0, p.y + 0.35, p.z + facingV.z * 1.0],
           color: meleeMove.color,
           angle: facing,
           scale: 1,
+          variant: slashVariantForType(meleeMove.type),
         })
         toEnemy.copy(battleWorld.enemyPos).sub(battleWorld.playerPos)
         const dist = toEnemy.length()
@@ -132,8 +136,10 @@ export default function Player() {
           origin: [p.x + aimDir.x * 0.7, p.y + 0.5, p.z + aimDir.z * 0.7],
           dir: [aimDir.x, aimDir.y, aimDir.z],
         })
+        playLaunch(projMove.visual)
+        maybeCry(st.playerFighter.dexId, 'player-attack')
       }
-      if (wantDash) st.tryDash(now)
+      if (wantDash && st.tryDash(now)) sfxWhoosh()
 
       // 速度決策：擊退 > 衝刺/突進 > 一般移動
       const dashing = now < st.dashingUntil

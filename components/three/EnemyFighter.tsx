@@ -8,6 +8,7 @@ import { useBattle } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
 import { useStyleMode } from '@/stores/useStyleMode'
 import { battleWorld, ENEMY_SPAWN } from '@/stores/battleWorld'
+import { maybeCry, playLaunch, sfxSlash } from '@/lib/sfx'
 import { hitPlayer } from './combat'
 import { ARENAS } from './arenas/types'
 import PokemonRenderable from './renderables/PokemonRenderable'
@@ -145,6 +146,7 @@ export default function EnemyFighter() {
             a.punchAt = now + 260
             a.punchPending = true
             battleWorld.enemyMotion.attackAt = now // 骨骼動畫：出拳當前搖
+            sfxSlash()
           } else if (projReady) {
             a.cooldowns.projectile = now
             a.preferPunch = true
@@ -157,6 +159,8 @@ export default function EnemyFighter() {
               origin: [p.x + aim.x * 1.1, p.y + 0.4, p.z + aim.z * 1.1],
               dir: [aim.x, aim.y, aim.z],
             })
+            playLaunch(projectile.visual)
+            maybeCry(boss.dexId, 'enemy-attack')
           }
         }
       }

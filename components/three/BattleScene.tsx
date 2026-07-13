@@ -11,6 +11,7 @@ import EnemyFighter from './EnemyFighter'
 import Projectiles from './Projectiles'
 import FXLayer from './FXLayer'
 import DamagePopups from './DamagePopups'
+import SfxDriver from './SfxDriver'
 import Gen8Wyndon from './arenas/Gen8Wyndon'
 import Gen1Indigo from './arenas/Gen1Indigo'
 import Gen1Field from './arenas/Gen1Field'
@@ -60,6 +61,8 @@ export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
   const Floor = FLOORS[arena]
   return (
     <KeyboardControls map={keyMap}>
+      {/* 合成音效駕駛（KO/號角/解鎖 AudioContext），不進 Canvas */}
+      <SfxDriver />
       <Canvas shadows camera={{ position: [0, 6, 12], fov: 50 }} dpr={[1, 2]}>
         {showStats && <Stats />}
         <Suspense fallback={null}>

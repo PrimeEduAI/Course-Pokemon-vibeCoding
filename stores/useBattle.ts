@@ -32,6 +32,8 @@ export interface BurstFx {
   angle: number
   scale: number
   at: number
+  /** 特效樣式：burst = MoveVisualId、slash = SlashVariant（未指定走通用外觀） */
+  variant?: string
 }
 
 export const DASH_MS = 250

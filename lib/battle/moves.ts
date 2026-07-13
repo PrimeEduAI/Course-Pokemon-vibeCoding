@@ -1,5 +1,9 @@
 export type MoveKind = 'melee' | 'projectile'
 
+/** 投射視覺樣式 ID：components/three/moveVisuals 註冊表的鍵（每招專屬外觀） */
+export const MOVE_VISUAL_IDS = ['bolt', 'stars', 'flame', 'wind', 'shuriken', 'aura', 'moon', 'beam', 'rock'] as const
+export type MoveVisualId = (typeof MOVE_VISUAL_IDS)[number]
+
 /** 完整 18 屬性 */
 export type PokeType =
   | 'normal' | 'fire' | 'water' | 'electric' | 'grass' | 'ice'
@@ -22,6 +26,8 @@ export interface MoveDef {
   range?: number
   /** 彈體 / 特效主色 */
   color: string
+  /** projectile 專屬視覺樣式（未指定時退回 beam） */
+  visual?: MoveVisualId
 }
 
 /** 舊出戰組合的招式表（皮卡丘 / 噴火龍），現由 species.ts 資料驅動；保留供測試與平衡基準 */
@@ -48,6 +54,7 @@ export const MOVES = {
     speed: 14,
     range: 25,
     color: '#ffe95c',
+    visual: 'bolt',
   },
   firePunch: {
     id: 'firePunch',
@@ -71,6 +78,7 @@ export const MOVES = {
     speed: 11,
     range: 25,
     color: '#ff8a3d',
+    visual: 'flame',
   },
 } as const satisfies Record<string, MoveDef>
 

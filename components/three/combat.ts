@@ -3,6 +3,7 @@ import { hasStab, type MoveDef } from '@/lib/battle/moves'
 import { computeDamage } from '@/lib/battle/damage'
 import { getTypeMult } from '@/lib/battle/typeChart'
 import { bossDmgScale } from '@/lib/battle/bosses'
+import { cryOnce, sfxImpact, sfxSuperEffective } from '@/lib/sfx'
 import { useBattle } from '@/stores/useBattle'
 import { battleWorld } from '@/stores/battleWorld'
 
@@ -19,6 +20,12 @@ export function hitEnemy(move: MoveDef, hitPos: Vector3) {
   const mult = getTypeMult(move.type, defender.types)
   const dmg = computeDamage(move, attacker, defender, hasStab(move, attacker), mult)
   st.dealDamageToEnemy(dmg)
+  // SFX：效果絕佳 = 重擊 + sting；否則依傷害挑輕重命中音
+  if (mult >= 2) sfxSuperEffective()
+  else sfxImpact(dmg >= 60)
+  // 低血量哀鳴：跌破 30% 時一次性鳴叫
+  const afterE = useBattle.getState()
+  if (afterE.enemyHp > 0 && afterE.enemyHp / afterE.enemyMaxHp < 0.3) cryOnce(defender.dexId, 'enemy-low', 0.5)
   st.addPopup({
     text: mult >= 2 ? `${dmg} ×2!` : mult === 0 ? '無效' : `${dmg}`,
     color: mult >= 2 ? '#ffe14d' : '#ffffff',
@@ -39,6 +46,10 @@ export function hitPlayer(move: MoveDef, hitPos: Vector3) {
   const raw = computeDamage(move, attacker, defender, hasStab(move, attacker), mult)
   const dmg = Math.max(1, Math.round(raw * ENEMY_DAMAGE_SCALE * bossDmgScale(attacker.dexId)))
   st.dealDamageToPlayer(dmg)
+  if (mult >= 2) sfxSuperEffective()
+  else sfxImpact(dmg >= 60)
+  const afterP = useBattle.getState()
+  if (afterP.playerHp > 0 && afterP.playerHp / afterP.playerMaxHp < 0.3) cryOnce(defender.dexId, 'player-low', 0.5)
   st.addPopup({
     text: `${dmg}`,
     color: '#ff6b5e',
