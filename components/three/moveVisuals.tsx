@@ -408,6 +408,177 @@ function RockVisual({ move }: VisualProps) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// 控制技（status）視覺家族：一眼看出「這發是 CC、不是傷害技」
+// ---------------------------------------------------------------------------
+
+/** ringwave（slow）：黃色同心環波向前推進，環面朝飛行方向 */
+function RingWaveVisual({ move }: VisualProps) {
+  const rings = useRef<(Mesh | null)[]>([])
+  const glowMap = useMemo(() => getGlowTexture(), [])
+  useFrame((state) => {
+    const t = state.clock.elapsedTime
+    for (let i = 0; i < 3; i++) {
+      const m = rings.current[i]
+      if (!m) continue
+      const k = (t * 1.6 + i / 3) % 1
+      m.position.z = -k * 1.2
+      m.scale.setScalar(0.45 + k * 0.75)
+      ;(m.material as MeshBasicMaterial).opacity = (1 - k) * 0.85
+    }
+  })
+  return (
+    <group>
+      {Array.from({ length: 3 }, (_, i) => (
+        <mesh key={i} ref={(el) => { rings.current[i] = el }}>
+          <torusGeometry args={[1, 0.06, 8, 28]} />
+          <meshBasicMaterial color={move.color} toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.8} />
+        </mesh>
+      ))}
+      <sprite scale={[0.7, 0.7, 1]}>
+        <spriteMaterial map={glowMap} color={move.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.6} />
+      </sprite>
+      <pointLight color={move.color} intensity={5} distance={6} decay={2} />
+    </group>
+  )
+}
+
+/** iceshard（root）：拉長冰晶錐 + 自旋碎晶 + 冷光 */
+function IceShardVisual({ move }: VisualProps) {
+  const core = useRef<Mesh>(null)
+  const orbit = useRef<Group>(null)
+  const glowMap = useMemo(() => getGlowTexture(), [])
+  useFrame((_, dt) => {
+    if (core.current) core.current.rotation.z += dt * 6
+    if (orbit.current) orbit.current.rotation.z -= dt * 4
+  })
+  return (
+    <group>
+      <mesh ref={core} rotation={[Math.PI / 2, 0, 0]}>
+        <octahedronGeometry args={[0.28, 0]} />
+        <meshBasicMaterial color={toWhite(move.color, 0.5)} toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.95} />
+      </mesh>
+      <group ref={orbit}>
+        {[0, 1, 2].map((i) => {
+          const a = (i / 3) * Math.PI * 2
+          return (
+            <mesh key={i} position={[Math.cos(a) * 0.32, Math.sin(a) * 0.32, -0.25]}>
+              <tetrahedronGeometry args={[0.1, 0]} />
+              <meshBasicMaterial color={move.color} toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.8} />
+            </mesh>
+          )
+        })}
+      </group>
+      <sprite scale={[1.0, 1.0, 1]}>
+        <spriteMaterial map={glowMap} color={move.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.65} />
+      </sprite>
+      <pointLight color={move.color} intensity={5} distance={6} decay={2} />
+    </group>
+  )
+}
+
+/** concussion（stun）：金白震盪環 + 脈動核心（悶雷質感） */
+function ConcussionVisual({ move }: VisualProps) {
+  const ring = useRef<Mesh>(null)
+  const coreM = useRef<Mesh>(null)
+  const glowMap = useMemo(() => getGlowTexture(), [])
+  useFrame((state) => {
+    const t = state.clock.elapsedTime
+    const k = (t * 2.2) % 1
+    if (ring.current) {
+      ring.current.scale.setScalar(0.4 + k * 0.9)
+      ;(ring.current.material as MeshBasicMaterial).opacity = (1 - k) * 0.9
+    }
+    if (coreM.current) coreM.current.scale.setScalar(1 + Math.sin(t * 18) * 0.22)
+  })
+  return (
+    <group>
+      <mesh ref={coreM}>
+        <sphereGeometry args={[0.17, 12, 12]} />
+        <meshBasicMaterial color="#ffffff" toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.95} />
+      </mesh>
+      <mesh ref={ring}>
+        <torusGeometry args={[1, 0.08, 8, 28]} />
+        <meshBasicMaterial color={move.color} toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.9} />
+      </mesh>
+      <sprite scale={[1.1, 1.1, 1]}>
+        <spriteMaterial map={glowMap} color={move.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.7} />
+      </sprite>
+      <pointLight color={move.color} intensity={6} distance={6} decay={2} />
+    </group>
+  )
+}
+
+/** flamelet（burn）：藍白鬼火 —— 小型搖曳火苗 + 遊絲尾跡 */
+function FlameletVisual({ move }: VisualProps) {
+  const wisps = useRef<(Group | null)[]>([])
+  const glowMap = useMemo(() => getGlowTexture(), [])
+  useFrame((state) => {
+    const t = state.clock.elapsedTime
+    for (let i = 0; i < 3; i++) {
+      const g = wisps.current[i]
+      if (!g) continue
+      g.position.set(Math.sin(t * 9 + i * 2.1) * 0.16, Math.cos(t * 7 + i * 1.7) * 0.16, -i * 0.3)
+      g.scale.setScalar(0.65 - i * 0.15 + Math.abs(Math.sin(t * 11 + i)) * 0.25)
+    }
+  })
+  return (
+    <group>
+      {[0, 1, 2].map((i) => (
+        <group key={i} ref={(el) => { wisps.current[i] = el }}>
+          <sprite>
+            <spriteMaterial map={glowMap} color={i === 0 ? toWhite(move.color, 0.55) : move.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.8} />
+          </sprite>
+        </group>
+      ))}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.1]}>
+        <coneGeometry args={[0.13, 0.7, 8]} />
+        <meshBasicMaterial color={toWhite(move.color, 0.6)} toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.7} />
+      </mesh>
+      <pointLight color={move.color} intensity={6} distance={6} decay={2} />
+    </group>
+  )
+}
+
+/** darkpulse（weaken）：暗影脈衝 —— 紫黑波紋殼層收放 + 沉尾跡 */
+function DarkPulseVisual({ move }: VisualProps) {
+  const shells = useRef<(Mesh | null)[]>([])
+  const glowMap = useMemo(() => getGlowTexture(), [])
+  useFrame((state) => {
+    const t = state.clock.elapsedTime
+    for (let i = 0; i < 2; i++) {
+      const m = shells.current[i]
+      if (!m) continue
+      const k = (t * 2 + i * 0.5) % 1
+      m.scale.setScalar(0.25 + k * 0.7)
+      ;(m.material as MeshBasicMaterial).opacity = (1 - k) * 0.6
+    }
+  })
+  return (
+    <group>
+      <mesh>
+        <sphereGeometry args={[0.18, 12, 12]} />
+        <meshBasicMaterial color="#241436" toneMapped={false} transparent opacity={0.95} />
+      </mesh>
+      {[0, 1].map((i) => (
+        <mesh key={i} ref={(el) => { shells.current[i] = el }}>
+          <sphereGeometry args={[1, 14, 14]} />
+          <meshBasicMaterial color={move.color} toneMapped={false} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.5} wireframe />
+        </mesh>
+      ))}
+      <sprite scale={[1.2, 1.2, 1]}>
+        <spriteMaterial map={glowMap} color={move.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.55} />
+      </sprite>
+      {[0.45, 0.9].map((z, i) => (
+        <sprite key={i} position={[0, 0, -z]} scale={[0.5 - i * 0.15, 0.5 - i * 0.15, 1]}>
+          <spriteMaterial map={glowMap} color={move.color} blending={AdditiveBlending} depthWrite={false} transparent opacity={0.35 - i * 0.12} />
+        </sprite>
+      ))}
+      <pointLight color={move.color} intensity={5} distance={6} decay={2} />
+    </group>
+  )
+}
+
 export const PROJECTILE_VISUALS: Record<MoveVisualId, ComponentType<VisualProps>> = {
   bolt: BoltVisual,
   stars: StarsVisual,
@@ -418,6 +589,11 @@ export const PROJECTILE_VISUALS: Record<MoveVisualId, ComponentType<VisualProps>
   moon: MoonVisual,
   beam: BeamVisual,
   rock: RockVisual,
+  ringwave: RingWaveVisual,
+  iceshard: IceShardVisual,
+  concussion: ConcussionVisual,
+  flamelet: FlameletVisual,
+  darkpulse: DarkPulseVisual,
 }
 
 // ---------------------------------------------------------------------------
@@ -732,6 +908,12 @@ const IMPACT_FX: Record<MoveVisualId, ComponentType<FxProps>> = {
   moon: BloomFlower,
   beam: GenericBurst,
   rock: ShardScatter,
+  // 控制技命中：復用最貼題的既有爆閃（顏色跟招式走，讀感已足夠區分）
+  ringwave: SparkBurst,
+  iceshard: WaterSplash,
+  concussion: RingShockwave,
+  flamelet: FireBlossom,
+  darkpulse: ImplosionBurst,
 }
 
 export function ImpactFxRenderer({ fx }: FxProps) {

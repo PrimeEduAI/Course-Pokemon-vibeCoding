@@ -233,6 +233,50 @@ export function sfxGimmickCharge() {
   noise({ dur: 0.22, gain: 0.2, filter: 'lowpass', from: 800, attack: 0.004, when: 0.78 })
 }
 
+/** 電磁波（slow 控制技）：低頻嗡鳴 + 電顫 */
+export function sfxParalyzeBuzz() {
+  tone({ type: 'square', from: 220, to: 180, dur: 0.24, gain: 0.12 })
+  tone({ type: 'square', from: 440, to: 330, dur: 0.2, gain: 0.08, when: 0.04 })
+  noise({ dur: 0.22, gain: 0.1, filter: 'bandpass', from: 2400, to: 1200, q: 4 })
+}
+
+/** 冰晶（root 控制技）：玻璃質感高音 tinkle + 冷冽噪音 */
+export function sfxIceCrack() {
+  tone({ type: 'triangle', from: 1976, to: 1480, dur: 0.14, gain: 0.12 })
+  tone({ type: 'sine', from: 2960, dur: 0.1, gain: 0.07, when: 0.06 })
+  noise({ dur: 0.18, gain: 0.1, filter: 'highpass', from: 5200, attack: 0.004 })
+}
+
+/** 震盪環（stun 控制技）：短促悶雷 thump + 金屬 ring */
+export function sfxConcussionShot() {
+  tone({ type: 'sine', from: 180, to: 55, dur: 0.2, gain: 0.34, attack: 0.004 })
+  tone({ type: 'triangle', from: 880, to: 620, dur: 0.16, gain: 0.09, when: 0.03 })
+}
+
+/** 鬼火（burn 控制技）：氣音火苗 flicker */
+export function sfxWispFlicker() {
+  noise({ dur: 0.3, gain: 0.16, filter: 'bandpass', from: 700, to: 1900, q: 2.4, attack: 0.06 })
+  tone({ type: 'sine', from: 520, to: 780, dur: 0.22, gain: 0.08, attack: 0.05 })
+}
+
+/** 暗影脈衝（weaken 控制技）：低沉下滑 drone */
+export function sfxDarkDrone() {
+  tone({ type: 'sawtooth', from: 300, to: 90, dur: 0.3, gain: 0.14, attack: 0.03 })
+  tone({ type: 'sine', from: 150, to: 60, dur: 0.34, gain: 0.16, when: 0.02 })
+}
+
+/** 狀態命中（施加成功）：短促下行雙音，跟傷害命中音區隔 */
+export function sfxStatusApply() {
+  tone({ type: 'square', from: 620, dur: 0.08, gain: 0.11 })
+  tone({ type: 'square', from: 415, dur: 0.14, gain: 0.11, when: 0.08 })
+}
+
+/** 落地悶響（跳躍著地）：軟 thud + 塵土沙沙 */
+export function sfxThud() {
+  tone({ type: 'sine', from: 95, to: 45, dur: 0.13, gain: 0.26, attack: 0.003 })
+  noise({ dur: 0.09, gain: 0.1, filter: 'lowpass', from: 500, attack: 0.003 })
+}
+
 // ---------------------------------------------------------------------------
 // 發射音對照表：每種視覺樣式一個專屬發射音（純資料，可測試）
 // ---------------------------------------------------------------------------
@@ -240,6 +284,7 @@ export function sfxGimmickCharge() {
 export type LaunchSoundId =
   | 'zap' | 'sparkle' | 'whooshLow' | 'windSweep' | 'tripleWhoosh'
   | 'auraPulse' | 'moonShimmer' | 'pew' | 'rockThrow'
+  | 'paralyzeBuzz' | 'iceCrack' | 'concussionShot' | 'wispFlicker' | 'darkDrone'
 
 export const LAUNCH_SOUND: Record<MoveVisualId, LaunchSoundId> = {
   bolt: 'zap',
@@ -251,6 +296,11 @@ export const LAUNCH_SOUND: Record<MoveVisualId, LaunchSoundId> = {
   moon: 'moonShimmer',
   beam: 'pew',
   rock: 'rockThrow',
+  ringwave: 'paralyzeBuzz',
+  iceshard: 'iceCrack',
+  concussion: 'concussionShot',
+  flamelet: 'wispFlicker',
+  darkpulse: 'darkDrone',
 }
 
 const LAUNCH_PLAYERS: Record<LaunchSoundId, () => void> = {
@@ -263,6 +313,11 @@ const LAUNCH_PLAYERS: Record<LaunchSoundId, () => void> = {
   moonShimmer: sfxMoonShimmer,
   pew: sfxPew,
   rockThrow: sfxRockThrow,
+  paralyzeBuzz: sfxParalyzeBuzz,
+  iceCrack: sfxIceCrack,
+  concussionShot: sfxConcussionShot,
+  wispFlicker: sfxWispFlicker,
+  darkDrone: sfxDarkDrone,
 }
 
 /** 投射發射音：依招式視覺樣式挑專屬合成音（未指定 → beam 的 pew） */

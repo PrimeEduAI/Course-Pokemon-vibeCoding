@@ -3,7 +3,11 @@ import type { MoveDef } from '@/lib/battle/moves'
 import { METER_MAX, type GimmickDef } from '@/lib/battle/gimmicks'
 import { SPECIES, toFighter, type FighterDef } from '@/lib/battle/species'
 import { canFire } from '@/lib/battle/cooldown'
-import { resetWorld } from './battleWorld'
+import {
+  STATUS_META, activeStatuses, applyStatus, isActionLocked, pruneStatuses, tickBurn,
+  type StatusEffect, type StatusKind,
+} from '@/lib/battle/status'
+import { battleWorld, resetWorld } from './battleWorld'
 
 export type Phase = 'fighting' | 'victory' | 'defeat'
 
@@ -84,11 +88,14 @@ interface BattleState {
   resetNonce: number
   playerGimmick: GimmickSide
   enemyGimmick: GimmickSide
+  /** 控制技狀態（麻痺/禁錮/震懾/灼傷/弱化），每邊一份；過期由 tickStatus 修剪 */
+  playerEffects: StatusEffect[]
+  enemyEffects: StatusEffect[]
 
   /** 選角完成 / 進場：設定雙方出戰者並重開一場乾淨的戰鬥 */
   configure: (player: FighterDef, enemy: FighterDef) => void
-  /** slot 0 = 近戰（Z）、1 = 投射（X） */
-  tryFire: (slot: 0 | 1, now: number) => boolean
+  /** slot 0 = 近戰（J）、1 = 投射（K）、2 = 控制（U）；震懾中一律鎖招 */
+  tryFire: (slot: 0 | 1 | 2, now: number) => boolean
   tryDash: (now: number) => boolean
   isInvulnerable: (now: number) => boolean
   dealDamageToEnemy: (amount: number) => void
@@ -105,6 +112,10 @@ interface BattleState {
   tryActivateGimmick: (side: GimmickSideId, def: GimmickDef, now: number) => boolean
   /** 持續時間到（durationMs 有限）→ 收掉發動狀態 */
   expireGimmick: (side: GimmickSideId) => void
+  /** 對某一邊施加控制狀態（重複施加 = 刷新持續時間） */
+  applyStatusTo: (side: GimmickSideId, kind: StatusKind, now: number) => void
+  /** 每幀狀態結算：修剪過期效果、灼傷 DoT、寫入模型染色頻道（Player useFrame 驅動） */
+  tickStatus: (now: number) => void
   /** 再戰：保留目前出戰組合 */
   reset: () => void
 }
@@ -127,6 +138,8 @@ const freshRound = (player: FighterDef, enemy: FighterDef) => ({
   fx: [],
   playerGimmick: freshGimmick(),
   enemyGimmick: freshGimmick(),
+  playerEffects: [] as StatusEffect[],
+  enemyEffects: [] as StatusEffect[],
 })
 
 const gimmickKey = (side: GimmickSideId): 'playerGimmick' | 'enemyGimmick' =>
@@ -144,6 +157,7 @@ export const useBattle = create<BattleState>((set, get) => ({
   tryFire: (slot, now) => {
     const s = get()
     if (s.phase !== 'fighting') return false
+    if (isActionLocked(s.playerEffects, now)) return false // 震懾：封招
     const move = s.playerFighter.moves[slot]
     if (!canFire(s.cooldowns[move.id] ?? 0, move.cooldownMs, now)) return false
     set({ cooldowns: { ...s.cooldowns, [move.id]: now } })
@@ -153,6 +167,7 @@ export const useBattle = create<BattleState>((set, get) => ({
   tryDash: (now) => {
     const s = get()
     if (s.phase !== 'fighting') return false
+    if (isActionLocked(s.playerEffects, now)) return false // 震懾：連疾走也鎖
     if (!canFire(s.dashLastAt, DASH_COOLDOWN_MS, now)) return false
     set({ dashLastAt: now, dashingUntil: now + DASH_MS })
     return true
@@ -214,6 +229,49 @@ export const useBattle = create<BattleState>((set, get) => ({
     const g = get()[key]
     if (!g.active) return
     set({ [key]: { ...g, active: null } } as Partial<BattleState>)
+  },
+
+  applyStatusTo: (side, kind, now) => {
+    const s = get()
+    if (s.phase !== 'fighting') return
+    const key = side === 'player' ? 'playerEffects' : 'enemyEffects'
+    set({ [key]: applyStatus(s[key], kind, now) } as Partial<BattleState>)
+  },
+
+  tickStatus: (now) => {
+    const s = get()
+    if (s.phase !== 'fighting') {
+      battleWorld.playerStatusColor = null
+      battleWorld.enemyStatusColor = null
+      return
+    }
+    // 灼傷 DoT（不觸發受擊白閃 / 擊退 / 計量，只扣血 + 小型傷害數字）
+    for (const side of ['player', 'enemy'] as const) {
+      const key = side === 'player' ? 'playerEffects' as const : 'enemyEffects' as const
+      const maxHp = side === 'player' ? s.playerMaxHp : s.enemyMaxHp
+      const burned = tickBurn(get()[key], now, maxHp)
+      if (burned.damage > 0) {
+        const st2 = get()
+        const hpKey = side === 'player' ? 'playerHp' as const : 'enemyHp' as const
+        const hp = Math.max(0, st2[hpKey] - burned.damage)
+        const pos = side === 'player' ? battleWorld.playerPos : battleWorld.enemyPos
+        set({
+          [hpKey]: hp,
+          [key]: burned.effects,
+          ...(hp <= 0 ? { phase: (side === 'player' ? 'defeat' : 'victory') as Phase } : null),
+        } as Partial<BattleState>)
+        st2.addPopup({ text: `${burned.damage}`, color: STATUS_META.burn.color, pos: [pos.x, pos.y + 1.0, pos.z], big: false })
+      }
+      // 過期修剪（無變化時回原參考 → 不觸發 set）
+      const cur = get()[key]
+      const pruned = pruneStatuses(cur, now)
+      if (pruned !== cur) set({ [key]: pruned } as Partial<BattleState>)
+      // 模型染色頻道：取最新施加的有效狀態主色
+      const act = activeStatuses(get()[key], now)
+      const color = act.length ? STATUS_META[act[act.length - 1].kind].color : null
+      if (side === 'player') battleWorld.playerStatusColor = color
+      else battleWorld.enemyStatusColor = color
+    }
   },
 
   reset: () => {

@@ -1,4 +1,5 @@
-import { hpPool, MOVES, type MoveDef, type PokeType } from './moves'
+import { CONTROL_COOLDOWN_MS, CONTROL_POWER, hpPool, MOVES, STATUS_VISUAL, type MoveDef, type PokeType } from './moves'
+import type { StatusKind } from './status'
 
 export type TypeName = PokeType
 
@@ -11,14 +12,14 @@ export interface BaseStats {
   spe: number
 }
 
-/** 手工整備的出戰定義：真實種族值 + 兩招（[近戰, 投射]） */
+/** 手工整備的出戰定義：真實種族值 + 三招（[近戰, 投射, 控制]） */
 export interface SpeciesDef {
   dexId: number
   nameZh: string
   nameEn: string
   types: TypeName[]
   base: BaseStats
-  moves: [MoveDef, MoveDef]
+  moves: [MoveDef, MoveDef, MoveDef]
   targetHeight: number
 }
 
@@ -32,11 +33,19 @@ export interface FighterDef {
   atk: number
   def: number
   maxHp: number
-  moves: [MoveDef, MoveDef]
+  moves: [MoveDef, MoveDef, MoveDef]
   targetHeight: number
 }
 
 const m = (def: MoveDef) => def
+
+/** 控制技工廠：投射型遞送、小傷害 18、冷卻 8.5s、視覺樣式跟狀態種類走 */
+export const controlMove = (id: string, nameZh: string, nameEn: string, type: PokeType, status: StatusKind, color: string): MoveDef => ({
+  id, nameZh, nameEn, type, status,
+  power: CONTROL_POWER, cooldownMs: CONTROL_COOLDOWN_MS,
+  kind: 'projectile', speed: 14, range: 25,
+  color, visual: STATUS_VISUAL[status],
+})
 
 /** 手工招式庫（威力/冷卻以 電光一閃40/0.9s、十萬伏特90/4s 為基準刻度） */
 export const SPECIES_MOVES = {
@@ -58,6 +67,15 @@ export const SPECIES_MOVES = {
   psychicBlast: m({ id: 'psychicBlast', nameZh: '精神強念', nameEn: 'Psychic', type: 'psychic', power: 90, cooldownMs: 4500, kind: 'projectile', speed: 12, range: 25, color: '#e08aff', visual: 'aura' }),
   behemothBlade: m({ id: 'behemothBlade', nameZh: '巨獸斬', nameEn: 'Behemoth Blade', type: 'steel', power: 100, cooldownMs: 2800, kind: 'melee', range: 3.0, color: '#9fd8ff' }),
   moonblast: m({ id: 'moonblast', nameZh: '月亮之力', nameEn: 'Moonblast', type: 'fairy', power: 95, cooldownMs: 4500, kind: 'projectile', speed: 12, range: 25, color: '#ffb3d9', visual: 'moon' }),
+  // —— 控制技（moves[2]，U 鍵）——
+  thunderWave: controlMove('thunderWave', '電磁波', 'Thunder Wave', 'electric', 'slow', '#ffe95c'),
+  growl: controlMove('growl', '叫聲', 'Growl', 'normal', 'weaken', '#c9b8e8'),
+  willOWisp: controlMove('willOWisp', '鬼火', 'Will-O-Wisp', 'fire', 'burn', '#8ad4ff'),
+  iceBeamRoot: controlMove('iceBeamRoot', '冰凍光束', 'Ice Beam', 'ice', 'root', '#9fdcff'),
+  roar: controlMove('roar', '咆哮', 'Roar', 'normal', 'stun', '#ffd75e'),
+  fakeOut: controlMove('fakeOut', '擊掌奇襲', 'Fake Out', 'normal', 'stun', '#ffe6a8'),
+  smokescreen: controlMove('smokescreen', '煙幕', 'Smokescreen', 'normal', 'slow', '#b9c4cc'),
+  wideAngleBeam: controlMove('wideAngleBeam', '廣角光', 'Prism Flare', 'psychic', 'weaken', '#e08aff'),
 } as const satisfies Record<string, MoveDef>
 
 const sm = SPECIES_MOVES
@@ -67,52 +85,52 @@ export const SPECIES: Record<number, SpeciesDef> = {
   25: {
     dexId: 25, nameZh: '皮卡丘', nameEn: 'PIKACHU', types: ['electric'],
     base: { hp: 35, atk: 55, def: 40, spa: 50, spd: 50, spe: 90 },
-    moves: [sm.quickAttack, sm.thunderbolt], targetHeight: 1.9,
+    moves: [sm.quickAttack, sm.thunderbolt, sm.thunderWave], targetHeight: 1.9,
   },
   133: {
     dexId: 133, nameZh: '伊布', nameEn: 'EEVEE', types: ['normal'],
     base: { hp: 55, atk: 55, def: 50, spa: 45, spd: 65, spe: 55 },
-    moves: [sm.quickAttack, sm.swift], targetHeight: 1.7,
+    moves: [sm.quickAttack, sm.swift, sm.growl], targetHeight: 1.7,
   },
   6: {
     dexId: 6, nameZh: '噴火龍', nameEn: 'CHARIZARD', types: ['fire', 'flying'],
     base: { hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100 },
-    moves: [sm.firePunch, sm.flamethrower], targetHeight: 2.2,
+    moves: [sm.firePunch, sm.flamethrower, sm.willOWisp], targetHeight: 2.2,
   },
   249: {
     dexId: 249, nameZh: '洛奇亞', nameEn: 'LUGIA', types: ['psychic', 'flying'],
     base: { hp: 106, atk: 90, def: 130, spa: 90, spd: 154, spe: 110 },
-    moves: [sm.extrasensory, sm.aeroblast], targetHeight: 2.6,
+    moves: [sm.extrasensory, sm.aeroblast, sm.iceBeamRoot], targetHeight: 2.6,
   },
   384: {
     dexId: 384, nameZh: '烈空坐', nameEn: 'RAYQUAZA', types: ['dragon', 'flying'],
     base: { hp: 105, atk: 150, def: 90, spa: 150, spd: 90, spe: 95 },
-    moves: [sm.dragonClaw, sm.dragonPulse], targetHeight: 2.8,
+    moves: [sm.dragonClaw, sm.dragonPulse, sm.roar], targetHeight: 2.8,
   },
   448: {
     dexId: 448, nameZh: '路卡利歐', nameEn: 'LUCARIO', types: ['fighting', 'steel'],
     base: { hp: 70, atk: 110, def: 70, spa: 115, spd: 70, spe: 90 },
-    moves: [sm.bulletPunch, sm.auraSphere], targetHeight: 2.0,
+    moves: [sm.bulletPunch, sm.auraSphere, sm.fakeOut], targetHeight: 2.0,
   },
   643: {
     dexId: 643, nameZh: '雷希拉姆', nameEn: 'RESHIRAM', types: ['dragon', 'fire'],
     base: { hp: 100, atk: 120, def: 100, spa: 150, spd: 120, spe: 90 },
-    moves: [sm.dragonClaw, sm.blueFlare], targetHeight: 2.7,
+    moves: [sm.dragonClaw, sm.blueFlare, sm.willOWisp], targetHeight: 2.7,
   },
   658: {
     dexId: 658, nameZh: '甲賀忍蛙', nameEn: 'GRENINJA', types: ['water', 'dark'],
     base: { hp: 72, atk: 95, def: 67, spa: 103, spd: 71, spe: 122 },
-    moves: [sm.suckerPunch, sm.waterShuriken], targetHeight: 2.0,
+    moves: [sm.suckerPunch, sm.waterShuriken, sm.smokescreen], targetHeight: 2.0,
   },
   791: {
     dexId: 791, nameZh: '索爾迦雷歐', nameEn: 'SOLGALEO', types: ['psychic', 'steel'],
     base: { hp: 137, atk: 137, def: 107, spa: 113, spd: 89, spe: 97 },
-    moves: [sm.ironHead, sm.psychicBlast], targetHeight: 2.6,
+    moves: [sm.ironHead, sm.psychicBlast, sm.wideAngleBeam], targetHeight: 2.6,
   },
   888: {
     dexId: 888, nameZh: '蒼響', nameEn: 'ZACIAN', types: ['fairy', 'steel'],
     base: { hp: 92, atk: 130, def: 115, spa: 80, spd: 115, spe: 138 },
-    moves: [sm.behemothBlade, sm.moonblast], targetHeight: 2.4,
+    moves: [sm.behemothBlade, sm.moonblast, sm.roar], targetHeight: 2.4,
   },
 }
 

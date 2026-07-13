@@ -85,11 +85,13 @@ describe('模型可用性表', () => {
 })
 
 describe('meterGain：計量增益', () => {
-  test('打中 +8、被打 +5；重擊 ×1.5', () => {
-    expect(meterGain('dealt', false)).toBe(8)
-    expect(meterGain('taken', false)).toBe(5)
-    expect(meterGain('dealt', true)).toBe(12)
-    expect(meterGain('taken', true)).toBe(7.5)
+  test('打中 +14、被打 +9；重擊 ×1.5（約 4–6 次命中集滿）', () => {
+    expect(meterGain('dealt', false)).toBe(14)
+    expect(meterGain('taken', false)).toBe(9)
+    expect(meterGain('dealt', true)).toBe(21)
+    expect(meterGain('taken', true)).toBe(13.5)
+    // 全普通命中 8 次內必滿；重擊參與更快
+    expect(Math.ceil(METER_MAX / meterGain('dealt', false))).toBeLessThanOrEqual(8)
   })
   test('AI 發動門檻常數：HP ≤50%、meter ≥60', () => {
     expect(ENEMY_GIMMICK_HP_RATIO).toBe(0.5)

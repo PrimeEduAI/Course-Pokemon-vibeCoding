@@ -27,10 +27,10 @@ export interface GimmickDef {
 // ---------------------------------------------------------------------------
 
 export const METER_MAX = 100
-/** 玩家 / AI 打中對手 */
-export const METER_GAIN_DEALT = 8
+/** 玩家 / AI 打中對手（快節奏：約 4–6 次命中集滿） */
+export const METER_GAIN_DEALT = 14
 /** 被打中 */
-export const METER_GAIN_TAKEN = 5
+export const METER_GAIN_TAKEN = 9
 /** 重擊（傷害 ≥60）加成 +50% */
 export const HEAVY_METER_MULT = 1.5
 /** AI 發動門檻：HP ≤50% 且 meter ≥60 */

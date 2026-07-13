@@ -4,12 +4,16 @@ import { computeDamage } from '@/lib/battle/damage'
 import { getTypeMult } from '@/lib/battle/typeChart'
 import { bossDmgScale } from '@/lib/battle/bosses'
 import { meterGain, type GimmickDef } from '@/lib/battle/gimmicks'
-import { cryOnce, sfxImpact, sfxSuperEffective } from '@/lib/sfx'
+import { STATUS_META, atkMult as statusAtkMult } from '@/lib/battle/status'
+import { cryOnce, sfxImpact, sfxStatusApply, sfxSuperEffective } from '@/lib/sfx'
 import { useBattle } from '@/stores/useBattle'
 import { battleWorld } from '@/stores/battleWorld'
 
 /** AI 傷害手感係數：沿用同一條傷害管線，僅整體縮放讓玩家能承受 4 拳左右 */
 export const ENEMY_DAMAGE_SCALE = 0.45
+
+/** 近戰垂直容差（雙向共用）：命中規則 = 水平距離 ≤ range 且 |Δy| ≤ 1.6m（+ 玩家側 ±60° 錐角） */
+export const MELEE_Y_TOLERANCE = 1.6
 
 const knockDir = new Vector3()
 
@@ -23,6 +27,17 @@ function applyGimmick(move: MoveDef, attacker: { level: number; atk: number }, d
   }
 }
 
+/** 控制技命中：施加狀態 + 狀態名彈出字 + 專屬音效 */
+function applyMoveStatus(move: MoveDef, target: 'player' | 'enemy', hitPos: Vector3) {
+  if (!move.status) return
+  const st = useBattle.getState()
+  const now = performance.now()
+  st.applyStatusTo(target, move.status, now)
+  const meta = STATUS_META[move.status]
+  st.addPopup({ text: `${meta.nameZh}！`, color: meta.color, pos: [hitPos.x, hitPos.y + 1.6, hitPos.z], big: true })
+  sfxStatusApply()
+}
+
 /** 玩家招式命中 BOSS：傷害 + 白閃 + 擊退 + 傷害數字 */
 export function hitEnemy(move: MoveDef, hitPos: Vector3) {
   const st = useBattle.getState()
@@ -30,8 +45,11 @@ export function hitEnemy(move: MoveDef, hitPos: Vector3) {
   const defender = st.enemyFighter
   const mult = getTypeMult(move.type, defender.types)
   const g = applyGimmick(move, attacker, defender, st.playerGimmick.active, st.enemyGimmick.active)
-  const dmg = computeDamage(g.move, g.atk, g.def, hasStab(move, attacker), mult)
+  // weaken（弱化）：攻方輸出 ×0.72
+  const weak = statusAtkMult(st.playerEffects, performance.now())
+  const dmg = Math.max(1, Math.round(computeDamage(g.move, g.atk, g.def, hasStab(move, attacker), mult) * weak))
   st.dealDamageToEnemy(dmg)
+  applyMoveStatus(move, 'enemy', hitPos)
   // 招牌能力計量：打中 +8（重擊 ×1.5）、被打 +5
   const heavy = dmg >= 60
   st.gainMeter('player', meterGain('dealt', heavy))
@@ -61,9 +79,11 @@ export function hitPlayer(move: MoveDef, hitPos: Vector3) {
   const mult = getTypeMult(move.type, defender.types)
   const g = applyGimmick(move, attacker, defender, st.enemyGimmick.active, st.playerGimmick.active)
   const raw = computeDamage(g.move, g.atk, g.def, hasStab(move, attacker), mult)
-  // ENEMY_DAMAGE_SCALE 在招牌能力 atkMult 之後仍然套用（平衡護欄）
-  const dmg = Math.max(1, Math.round(raw * ENEMY_DAMAGE_SCALE * bossDmgScale(attacker.dexId)))
+  // ENEMY_DAMAGE_SCALE 在招牌能力 atkMult 之後仍然套用（平衡護欄）；weaken 弱化 BOSS 輸出 ×0.72
+  const weak = statusAtkMult(st.enemyEffects, performance.now())
+  const dmg = Math.max(1, Math.round(raw * ENEMY_DAMAGE_SCALE * bossDmgScale(attacker.dexId) * weak))
   st.dealDamageToPlayer(dmg)
+  applyMoveStatus(move, 'player', hitPos)
   const heavy = dmg >= 60
   st.gainMeter('enemy', meterGain('dealt', heavy))
   st.gainMeter('player', meterGain('taken', heavy))

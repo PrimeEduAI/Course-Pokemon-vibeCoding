@@ -1,8 +1,27 @@
+import type { StatusKind } from './status'
+
 export type MoveKind = 'melee' | 'projectile'
 
-/** 投射視覺樣式 ID：components/three/moveVisuals 註冊表的鍵（每招專屬外觀） */
-export const MOVE_VISUAL_IDS = ['bolt', 'stars', 'flame', 'wind', 'shuriken', 'aura', 'moon', 'beam', 'rock'] as const
+/** 投射視覺樣式 ID：components/three/moveVisuals 註冊表的鍵（每招專屬外觀）
+ *  後五個為控制技（status）視覺家族：slow / root / stun / burn / weaken 各一 */
+export const MOVE_VISUAL_IDS = [
+  'bolt', 'stars', 'flame', 'wind', 'shuriken', 'aura', 'moon', 'beam', 'rock',
+  'ringwave', 'iceshard', 'concussion', 'flamelet', 'darkpulse',
+] as const
 export type MoveVisualId = (typeof MOVE_VISUAL_IDS)[number]
+
+/** 狀態種類 → 控制技視覺樣式（黃色環波 / 冰晶 / 震盪環 / 藍白鬼火 / 暗影脈衝） */
+export const STATUS_VISUAL: Record<StatusKind, MoveVisualId> = {
+  slow: 'ringwave',
+  root: 'iceshard',
+  stun: 'concussion',
+  burn: 'flamelet',
+  weaken: 'darkpulse',
+}
+
+/** 控制技（moves[2]，U 鍵）共用刻度：小傷害 + 長冷卻，價值在附帶狀態 */
+export const CONTROL_POWER = 18
+export const CONTROL_COOLDOWN_MS = 8500
 
 /** 完整 18 屬性 */
 export type PokeType =
@@ -28,6 +47,8 @@ export interface MoveDef {
   color: string
   /** projectile 專屬視覺樣式（未指定時退回 beam） */
   visual?: MoveVisualId
+  /** 控制技：命中時對目標施加的狀態（lib/battle/status.ts） */
+  status?: StatusKind
 }
 
 /** 舊出戰組合的招式表（皮卡丘 / 噴火龍），現由 species.ts 資料驅動；保留供測試與平衡基準 */

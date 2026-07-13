@@ -1,10 +1,12 @@
 'use client'
-import { useGLTF } from '@react-three/drei'
+import { useAnimations, useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
-import { Box3, Group, Mesh, Object3D, Vector3 } from 'three'
+import { useEffect, useMemo, useRef } from 'react'
+import { Box3, Group, LoopRepeat, Mesh, Object3D, Vector3 } from 'three'
 import { SkeletonUtils } from 'three-stdlib'
 import { idleBob } from '@/lib/movement'
+import { resolveClipRoles } from '@/lib/clipRoles'
+import { stripOriginXZ } from '../PokemonModel'
 
 /**
  * 展示台專用模型載入器。
@@ -34,7 +36,7 @@ function poseAwareBox(root: Object3D) {
 const UPRIGHT_FIX_X: Record<number, number> = { 25: -Math.PI / 2 }
 
 export default function ShowpieceModel({ dexId, targetHeight = 1.3 }: { dexId: number; targetHeight?: number }) {
-  const { scene } = useGLTF(`/assets/glb/regular/${dexId}.glb`)
+  const { scene, animations } = useGLTF(`/assets/glb/regular/${dexId}.glb`)
   const model = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
     clone.traverse((o) => { if (o instanceof Mesh) o.castShadow = true })
@@ -49,9 +51,35 @@ export default function ShowpieceModel({ dexId, targetHeight = 1.3 }: { dexId: n
     clone.position.set(-center.x * s, -box.min.y * s, -center.z * s)
     return clone
   }, [scene, targetHeight, dexId])
+
+  // 展示待機動畫：有 battlewait/defaultwait 循環片段就播（如 658 甲賀忍蛙），
+  // 沒有（如 25 皮卡丘只有攻擊手勢）維持 bind pose + idleBob 浮動
+  const idleClips = useMemo(() => {
+    const roles = resolveClipRoles(animations.map((a) => ({ name: a.name, duration: a.duration })))
+    if (!roles.idle) return []
+    const src = animations.find((a) => a.name === roles.idle)
+    if (!src) return []
+    const c = src.clone()
+    c.name = 'idle'
+    stripOriginXZ(c) // 保險：待機循環若烘了 root motion，把 XZ 釘住
+    return [c]
+  }, [animations])
+
   const group = useRef<Group>(null)
+  const { actions } = useAnimations(idleClips, group)
+  const hasIdle = idleClips.length > 0
+  useEffect(() => {
+    const a = actions.idle
+    if (!a) return
+    a.reset()
+    a.setLoop(LoopRepeat, Infinity)
+    a.fadeIn(0.3).play()
+    return () => { a.fadeOut(0.2) }
+  }, [actions])
+
   useFrame(({ clock }) => {
-    if (group.current) group.current.position.y = idleBob(clock.elapsedTime, 0, 0.08)
+    // 有真待機動畫時關閉程序式浮動（骨骼自己會呼吸）
+    if (group.current && !hasIdle) group.current.position.y = idleBob(clock.elapsedTime, 0, 0.08)
   })
   return <group ref={group}><primitive object={model} /></group>
 }

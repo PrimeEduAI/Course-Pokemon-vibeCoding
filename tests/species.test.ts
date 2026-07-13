@@ -12,18 +12,36 @@ describe('species 資料', () => {
     }
     expect(getSpecies(151)).toBeNull()
   })
-  test('每筆定義：兩招 = [近戰, 投射]、屬性合法、六項種族值 > 0', () => {
+  test('每筆定義：三招 = [近戰, 投射, 控制]、屬性合法、六項種族值 > 0', () => {
     for (const s of Object.values(SPECIES)) {
+      expect(s.moves).toHaveLength(3)
       expect(s.moves[0].kind).toBe('melee')
       expect(s.moves[1].kind).toBe('projectile')
       expect(s.moves[1].speed ?? 0).toBeGreaterThan(0)
       expect(s.moves[0].color).toMatch(/^#/)
       expect(s.moves[1].color).toMatch(/^#/)
+      // 控制技：投射遞送、附帶狀態、小傷害 18、冷卻 8.5s
+      expect(s.moves[2].kind).toBe('projectile')
+      expect(s.moves[2].status).toBeDefined()
+      expect(s.moves[2].power).toBe(18)
+      expect(s.moves[2].cooldownMs).toBe(8500)
       expect(s.types.length).toBeGreaterThan(0)
       for (const t of s.types) expect(isTypeName(t)).toBe(true)
       for (const v of Object.values(s.base)) expect(v).toBeGreaterThan(0)
       expect(s.targetHeight).toBeGreaterThan(1)
     }
+  })
+  test('控制技對位：25 電磁波 slow、6 鬼火 burn、249 冰凍光束 root、448 擊掌奇襲 stun、791 廣角光 weaken', () => {
+    expect(SPECIES[25].moves[2].status).toBe('slow')
+    expect(SPECIES[133].moves[2].status).toBe('weaken')
+    expect(SPECIES[6].moves[2].status).toBe('burn')
+    expect(SPECIES[249].moves[2].status).toBe('root')
+    expect(SPECIES[384].moves[2].status).toBe('stun')
+    expect(SPECIES[448].moves[2].status).toBe('stun')
+    expect(SPECIES[643].moves[2].status).toBe('burn')
+    expect(SPECIES[658].moves[2].status).toBe('slow')
+    expect(SPECIES[791].moves[2].status).toBe('weaken')
+    expect(SPECIES[888].moves[2].status).toBe('stun')
   })
   test('重點種族值抽查：伊布 HP55、烈空坐 atk150、蒼響 spe138', () => {
     expect(SPECIES[133].base.hp).toBe(55)
@@ -63,6 +81,21 @@ describe('genericMoves', () => {
     expect(buildGenericMoves(['normal'])[1].nameZh).toBe('高速星星')
     expect(buildGenericMoves([])[1].nameZh).toBe('高速星星')
   })
+  test('第三招（控制技）依屬性分派：電→麻痺、水/冰→凍結、火→灼傷、硬派→震懾、靈系/妖精→弱化、其餘→威嚇', () => {
+    expect(buildGenericMoves(['electric'])[2].status).toBe('slow')
+    expect(buildGenericMoves(['water'])[2].status).toBe('root')
+    expect(buildGenericMoves(['ice'])[2].status).toBe('root')
+    expect(buildGenericMoves(['fire'])[2].status).toBe('burn')
+    for (const t of ['fighting', 'steel', 'rock', 'ground'] as const) expect(buildGenericMoves([t])[2].status).toBe('stun')
+    for (const t of ['psychic', 'ghost', 'dark', 'fairy'] as const) expect(buildGenericMoves([t])[2].status).toBe('weaken')
+    expect(buildGenericMoves(['grass'])[2].nameZh).toBe('威嚇')
+    expect(buildGenericMoves([])[2].status).toBe('weaken')
+    // 共同刻度：小傷害 + 長冷卻 + 投射
+    const c = buildGenericMoves(['electric'])[2]
+    expect(c.kind).toBe('projectile')
+    expect(c.power).toBe(18)
+    expect(c.cooldownMs).toBe(8500)
+  })
   test('18 屬性招牌技表：全屬性覆蓋、皆為投射、顏色齊備', () => {
     for (const t of Object.keys(TYPE_ZH)) {
       const mv = TYPE_MOVE[t as keyof typeof TYPE_MOVE]
@@ -83,7 +116,8 @@ describe('bosses', () => {
       expect(getSpecies(dex)).not.toBeNull()
       const boss = bossFor(id)
       expect(boss.maxHp).toBeGreaterThan(0)
-      expect(boss.moves).toHaveLength(2)
+      expect(boss.moves).toHaveLength(3)
+      expect(boss.moves[2].status).toBeDefined()
     }
   })
   test('世代對位：gen1 噴火龍、gen2 洛奇亞、gen8 蒼響', () => {

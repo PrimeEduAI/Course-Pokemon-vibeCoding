@@ -44,10 +44,12 @@ const keyMap = [
   { name: 'backward', keys: ['KeyS', 's', 'S', 'ArrowDown'] },
   { name: 'left', keys: ['KeyA', 'a', 'A', 'ArrowLeft'] },
   { name: 'right', keys: ['KeyD', 'd', 'D', 'ArrowRight'] },
-  // 技能（右手區，左手專心 WASD）：J 近戰 / K 投射 / L 或空白鍵 疾走
+  // 技能（右手區，左手專心 WASD）：J 近戰 / K 投射 / U 控制技 / L 疾走 / Space 跳躍
   { name: 'attack1', keys: ['KeyJ', 'j', 'J'] },
   { name: 'attack2', keys: ['KeyK', 'k', 'K'] },
-  { name: 'dash', keys: ['KeyL', 'l', 'L', 'Space', ' '] },
+  { name: 'attack3', keys: ['KeyU', 'u', 'U'] },
+  { name: 'dash', keys: ['KeyL', 'l', 'L'] },
+  { name: 'jump', keys: ['Space', ' '] },
   // 世代招牌能力（計量滿了才有效）：R 發動 MEGA / 極巨化 / Z 招式 / 羈絆爆發
   { name: 'gimmick', keys: ['KeyR', 'r', 'R'] },
 ]

@@ -58,7 +58,7 @@ function computeDisplayBox(root: Object3D): Box3 {
  * translation track 上（實測 run 位移可達 24 個模型單位）。世界位置由 RigidBody 驅動，
  * 因此把 origin 系 track 的 XZ 全部釘在第一幀（保留 Y 起伏）。
  */
-function stripOriginXZ(clip: AnimationClip) {
+export function stripOriginXZ(clip: AnimationClip) {
   for (const track of clip.tracks) {
     if (!/^origin[^.]*\.position$/i.test(track.name)) continue
     const v = track.values
@@ -203,27 +203,38 @@ export default function PokemonModel({ dexId, targetHeight = 1.2, entity, bob = 
     return () => mixer.removeEventListener('finished', onFinished)
   }, [mixer, actions])
 
-  const flashing = useRef(false)
+  // 材質狀態：'flash'（受擊白閃）> 狀態染色（控制技，色碼字串）> 'none'（還原）
+  const matState = useRef('none')
   useFrame(({ clock }, dt) => {
     const g = group.current
     if (!g) return
 
-    // —— 白閃（受擊）——
+    // —— 白閃（受擊）+ 狀態染色（麻痺黃 / 冰藍 / 灼橙 / 弱化紫，battleWorld 頻道驅動）——
     let flashUntil = 0
     if (entity) {
       flashUntil = entity === 'player' ? battleWorld.playerFlashUntil : battleWorld.enemyFlashUntil
+      const statusColor = entity === 'player' ? battleWorld.playerStatusColor : battleWorld.enemyStatusColor
       const shouldFlash = performance.now() < flashUntil
-      if (shouldFlash !== flashing.current) {
-        flashing.current = shouldFlash
+      const want = shouldFlash ? 'flash' : (statusColor ?? 'none')
+      if (want !== matState.current) {
+        matState.current = want
         for (const f of flashMats) {
-          if (shouldFlash) {
+          if (want === 'flash') {
             f.mat.emissive.setRGB(1, 1, 1)
             f.mat.emissiveIntensity = 1.6
+          } else if (want !== 'none') {
+            f.mat.emissive.set(want)
+            f.mat.emissiveIntensity = 0.45
           } else {
             f.mat.emissive.copy(f.emissive)
             f.mat.emissiveIntensity = f.intensity
           }
         }
+      }
+      // 染色中：呼吸脈動（跟白閃區隔，讀得出「持續狀態」）
+      if (matState.current !== 'flash' && matState.current !== 'none') {
+        const pulse = 0.45 + Math.sin(clock.elapsedTime * 7) * 0.18
+        for (const f of flashMats) f.mat.emissiveIntensity = pulse
       }
     }
 

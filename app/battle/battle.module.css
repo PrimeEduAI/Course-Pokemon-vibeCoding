@@ -864,3 +864,36 @@
   78% { opacity: 1; }
   100% { transform: translateX(-50%) scale(1.04); opacity: 0; }
 }
+
+/* 控制狀態徽章（HP 條下方）：單字 + 剩餘時間掃描環 */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  min-height: 22px;
+}
+.statusChip {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 9, 20, 0.85);
+}
+.statusSweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* 環形：中間挖空只留 2px 邊 */
+  -webkit-mask: radial-gradient(circle, transparent 7px, #000 8px);
+  mask: radial-gradient(circle, transparent 7px, #000 8px);
+}
+.statusGlyph {
+  position: relative;
+  font-size: 11px;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}

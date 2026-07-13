@@ -36,7 +36,13 @@ export const battleWorld = {
   /** 骨骼動畫指令頻道 */
   playerMotion: freshMotion(),
   enemyMotion: freshMotion(),
+  /** 狀態染色頻道（useBattle.tickStatus 每幀寫入；null = 無狀態）：模型層讀取做 emissive tint */
+  playerStatusColor: null as string | null,
+  enemyStatusColor: null as string | null,
 }
+
+// dev 診斷：瀏覽器 console 可直接讀 __world.playerPos（與 __battle 對仗）
+if (typeof window !== 'undefined') (window as unknown as { __world?: typeof battleWorld }).__world = battleWorld
 
 export const PLAYER_SPAWN: [number, number, number] = [0, 1, 6]
 export const ENEMY_SPAWN: [number, number, number] = [0, 1.6, -6.5]
@@ -49,6 +55,8 @@ export function resetWorld() {
   battleWorld.enemyFlashUntil = 0
   battleWorld.playerKnock.set(0, 0, 0)
   battleWorld.enemyKnock.set(0, 0, 0)
+  battleWorld.playerStatusColor = null
+  battleWorld.enemyStatusColor = null
   // hasKoClip 跟著掛載中的模型走（由 PokemonModel effect 管理），reset 不清
   for (const m of [battleWorld.playerMotion, battleWorld.enemyMotion]) {
     m.state = 'idle'

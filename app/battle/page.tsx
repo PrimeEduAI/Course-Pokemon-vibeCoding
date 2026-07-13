@@ -10,6 +10,7 @@ import { ARENAS, FIELD_LABEL, type ArenaId } from '@/components/three/arenas/typ
 import { cooldownProgress } from '@/lib/battle/cooldown'
 import { bossFor } from '@/lib/battle/bosses'
 import { METER_MAX, resolveGimmick } from '@/lib/battle/gimmicks'
+import { STATUS_META, type StatusEffect } from '@/lib/battle/status'
 import { sfxMeterReady } from '@/lib/sfx'
 import { TYPE_COLOR, TYPE_ZH, type TypeName } from '@/lib/battle/species'
 import BattleAudio from '@/components/three/BattleAudio'
@@ -39,6 +40,29 @@ function MoveSlot({ keyCap, name, progress }: { keyCap: string; name: string; pr
           style={{ background: `conic-gradient(rgba(4, 6, 16, 0.82) ${(1 - progress) * 360}deg, transparent 0deg)` }}
         />
       )}
+    </div>
+  )
+}
+
+/** 控制狀態徽章列：HP 條下方的小圖章（單字 + 剩餘時間掃描環） */
+function StatusChips({ effects, now, alignRight }: { effects: StatusEffect[]; now: number; alignRight?: boolean }) {
+  const active = effects.filter((e) => now < e.expiresAt)
+  if (active.length === 0) return null
+  return (
+    <div className={styles.statusRow} style={alignRight ? { justifyContent: 'flex-end' } : undefined}>
+      {active.map((e) => {
+        const meta = STATUS_META[e.kind]
+        const frac = Math.max(0, Math.min(1, (e.expiresAt - now) / (e.expiresAt - e.appliedAt)))
+        return (
+          <span key={e.kind} className={styles.statusChip} title={meta.nameZh}>
+            <span
+              className={styles.statusSweep}
+              style={{ background: `conic-gradient(${meta.color} ${frac * 360}deg, rgba(255,255,255,0.1) 0deg)` }}
+            />
+            <span className={styles.statusGlyph} style={{ color: meta.color }}>{meta.glyph}</span>
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -251,6 +275,9 @@ export default function BattlePage() {
   // 世代招牌能力：計量 / 發動狀態
   const playerGimmick = useBattle((s) => s.playerGimmick)
   const enemyGimmick = useBattle((s) => s.enemyGimmick)
+  // 控制狀態（HP 條下的小徽章）
+  const playerEffects = useBattle((s) => s.playerEffects)
+  const enemyEffects = useBattle((s) => s.enemyEffects)
 
   // 選角完成才掛載戰鬥（選場 → 選角 → 開打）
   const [fighterReady, setFighterReady] = useState(false)
@@ -302,7 +329,7 @@ export default function BattlePage() {
         e.preventDefault()
         useStyleMode.getState().cycle()
       }
-      // 空白鍵 = 疾走別名：擋掉捲動與焦點按鈕誤觸（例如結算後按空白鍵重按到「再戰」）
+      // 空白鍵 = 跳躍：擋掉捲動與焦點按鈕誤觸（例如結算後按空白鍵重按到「再戰」）
       if (e.code === 'Space' || e.key === ' ') e.preventDefault()
     }
     window.addEventListener('keydown', onKey)
@@ -350,6 +377,7 @@ export default function BattlePage() {
   const arenaDef = ARENAS.find((a) => a.id === arenaId)!
   const meleeMove = playerFighter.moves[0]
   const projMove = playerFighter.moves[1]
+  const ctrlMove = playerFighter.moves[2]
 
   // 世代招牌能力（本場戰場世代 × 出戰者）
   const pGimDef = resolveGimmick(arenaDef.gen, playerFighter.dexId)
@@ -396,6 +424,7 @@ export default function BattlePage() {
               </div>
               <span className={styles.hpNum}>{playerHp}/{playerMaxHp}</span>
             </div>
+            <StatusChips effects={playerEffects} now={now} />
           </div>
         </div>
 
@@ -413,6 +442,7 @@ export default function BattlePage() {
                 <div className={`${styles.hpFill} ${styles.hpFillOpp} ${hpClass(eRatio)}`} style={{ width: `${eRatio * 100}%` }} />
               </div>
             </div>
+            <StatusChips effects={enemyEffects} now={now} alignRight />
           </div>
         </div>
 
@@ -420,6 +450,7 @@ export default function BattlePage() {
         <div className={styles.slots}>
           <MoveSlot keyCap="J" name={meleeMove.nameZh} progress={cooldownProgress(cooldowns[meleeMove.id] ?? 0, meleeMove.cooldownMs, now)} />
           <MoveSlot keyCap="K" name={projMove.nameZh} progress={cooldownProgress(cooldowns[projMove.id] ?? 0, projMove.cooldownMs, now)} />
+          <MoveSlot keyCap="U" name={ctrlMove.nameZh} progress={cooldownProgress(cooldowns[ctrlMove.id] ?? 0, ctrlMove.cooldownMs, now)} />
           <MoveSlot keyCap="L" name="疾走" progress={cooldownProgress(dashLastAt === -Infinity ? 0 : dashLastAt, DASH_COOLDOWN_MS, now)} />
         </div>
 
@@ -462,7 +493,7 @@ export default function BattlePage() {
 
         {/* 操作提示 */}
         <div className={styles.hint}>
-          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>J K</span> 技能 · <span className={styles.hintKeys}>L / 空白鍵</span> 疾走 · <span className={styles.hintKeys}>R</span> 招牌能力（計量滿） · 鏡頭自動鎖定對手
+          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>Space</span> 跳躍 · <span className={styles.hintKeys}>J K U</span> 技能 · <span className={styles.hintKeys}>L</span> 疾走 · <span className={styles.hintKeys}>R</span> 招牌能力（計量滿） · 鏡頭自動鎖定對手
         </div>
 
         {/* 勝負結算 */}
