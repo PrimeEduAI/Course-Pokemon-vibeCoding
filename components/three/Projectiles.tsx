@@ -75,7 +75,7 @@ function Projectile({ p }: { p: ProjectileState }) {
 
   return (
     <group ref={group} position={p.origin}>
-      <group quaternion={quat}>
+      <group quaternion={quat} scale={p.scale ?? 1}>
         <Visual move={move} />
       </group>
     </group>

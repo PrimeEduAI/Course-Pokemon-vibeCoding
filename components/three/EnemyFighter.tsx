@@ -1,16 +1,19 @@
 'use client'
+import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { RigidBody, CapsuleCollider, type RapierRigidBody } from '@react-three/rapier'
 import { useEffect, useRef } from 'react'
 import { Group, Vector3 } from 'three'
 import { canFire } from '@/lib/battle/cooldown'
+import { ENEMY_GIMMICK_HP_RATIO, ENEMY_GIMMICK_METER_MIN, resolveGimmick } from '@/lib/battle/gimmicks'
 import { useBattle } from '@/stores/useBattle'
 import { useArena } from '@/stores/useArena'
 import { useStyleMode } from '@/stores/useStyleMode'
 import { battleWorld, ENEMY_SPAWN } from '@/stores/battleWorld'
-import { maybeCry, playLaunch, sfxSlash } from '@/lib/sfx'
+import { maybeCry, playCryFile, playLaunch, sfxGimmickCharge, sfxSlash } from '@/lib/sfx'
 import { hitPlayer } from './combat'
 import { ARENAS } from './arenas/types'
+import { modelUrl } from './PokemonModel'
 import PokemonRenderable from './renderables/PokemonRenderable'
 
 const APPROACH_SPEED = 3.5
@@ -66,6 +69,16 @@ export default function EnemyFighter() {
   const mode = useStyleMode((s) => s.mode)
   const arenaId = useArena((s) => s.arenaId)
   const arenaGen = ARENAS.find((a) => a.id === arenaId)?.gen
+
+  // 世代招牌能力：模型換裝（reactive）+ 體型倍率補間；計量過門檻先預載換裝 GLB
+  const gimmickForm = useBattle((s) => s.enemyGimmick.active?.modelSwap ?? 'regular')
+  const scaleG = useRef<Group>(null)
+  const meterNear = useBattle((s) => s.enemyGimmick.meter >= ENEMY_GIMMICK_METER_MIN && !s.enemyGimmick.used)
+  useEffect(() => {
+    if (!meterNear) return
+    const def = resolveGimmick(arenaGen ?? 1, boss.dexId)
+    if (def.modelSwap) useGLTF.preload(modelUrl(boss.dexId, def.modelSwap))
+  }, [meterNear, arenaGen, boss.dexId])
 
   useEffect(() => {
     if (!body.current) return
@@ -123,6 +136,24 @@ export default function EnemyFighter() {
     // 永遠面向玩家
     visual.current.rotation.y = Math.atan2(toPlayer.x, toPlayer.z)
 
+    // AI 招牌能力：HP ≤50% 且計量 ≥60 → 立即發動（一場一次；tryActivate 內建把關）
+    const eg = st.enemyGimmick
+    if (!eg.used && st.enemyHp / st.enemyMaxHp <= ENEMY_GIMMICK_HP_RATIO && eg.meter >= ENEMY_GIMMICK_METER_MIN) {
+      const def = resolveGimmick(arenaGen ?? 1, boss.dexId)
+      if (st.tryActivateGimmick('enemy', def, now)) {
+        sfxGimmickCharge()
+        playCryFile(boss.dexId, 0.7) // 發動吼叫：直接播、不吃節流
+        if (def.kind === 'zmove') battleWorld.enemyMotion.attackAt = now
+      }
+    }
+
+    // 招牌能力體型補間（極巨化 2.3× 從腳底長大）
+    if (scaleG.current) {
+      const targetScale = eg.active?.scale ?? 1
+      const cur = scaleG.current.scale.x
+      scaleG.current.scale.setScalar(cur + (targetScale - cur) * Math.min(1, dt * 2.8))
+    }
+
     // 決策（反應延遲 400ms）
     if (now >= a.nextDecisionAt) {
       a.nextDecisionAt = now + REACTION_MS
@@ -158,6 +189,7 @@ export default function EnemyFighter() {
               owner: 'enemy',
               origin: [p.x + aim.x * 1.1, p.y + 0.4, p.z + aim.z * 1.1],
               dir: [aim.x, aim.y, aim.z],
+              scale: st.enemyGimmick.active?.kind === 'dynamax' ? 1.8 : 1,
             })
             playLaunch(projectile.visual)
             maybeCry(boss.dexId, 'enemy-attack')
@@ -221,7 +253,10 @@ export default function EnemyFighter() {
       <CapsuleCollider args={[0.65, 0.7]} />
       <group ref={visual}>
         <group position={[0, -1.35, 0]}>
-          <PokemonRenderable dexId={boss.dexId} mode={mode} facing="front" targetHeight={boss.targetHeight} arenaGen={arenaGen} entity="enemy" motion={battleWorld.enemyMotion} />
+          {/* 招牌能力縮放群組：以腳底為原點長大（極巨化 BOSS 變 kaiju） */}
+          <group ref={scaleG}>
+            <PokemonRenderable dexId={boss.dexId} mode={mode} facing="front" targetHeight={boss.targetHeight} arenaGen={arenaGen} entity="enemy" motion={battleWorld.enemyMotion} form={gimmickForm} />
+          </group>
         </group>
       </group>
     </RigidBody>

@@ -215,6 +215,24 @@ export function sfxWindSweep() {
   noise({ dur: 0.3, gain: 0.1, filter: 'bandpass', from: 300, to: 900, q: 1, when: 0.05 })
 }
 
+/** 招牌能力計量集滿：上行三音 sting（亮、短、辨識度高） */
+export function sfxMeterReady() {
+  tone({ type: 'square', from: 740, dur: 0.09, gain: 0.13 })
+  tone({ type: 'square', from: 1108, dur: 0.1, gain: 0.13, when: 0.09 })
+  tone({ type: 'triangle', from: 1480, dur: 0.24, gain: 0.12, when: 0.18 })
+  tone({ type: 'sine', from: 2960, dur: 0.2, gain: 0.05, when: 0.2 })
+}
+
+/** 招牌能力發動：0.8s 低吼上升 swell + 收尾低頻震撼（MEGA / 極巨化 / Z 招式共用） */
+export function sfxGimmickCharge() {
+  tone({ type: 'sawtooth', from: 65, to: 520, dur: 0.8, gain: 0.26, attack: 0.1 })
+  tone({ type: 'triangle', from: 130, to: 1040, dur: 0.78, gain: 0.14, attack: 0.12, when: 0.04 })
+  noise({ dur: 0.85, gain: 0.16, filter: 'bandpass', from: 260, to: 2600, q: 1.1, attack: 0.25 })
+  // 尾端 impact：能量炸開
+  tone({ type: 'sine', from: 60, to: 26, dur: 0.5, gain: 0.5, attack: 0.004, when: 0.78 })
+  noise({ dur: 0.22, gain: 0.2, filter: 'lowpass', from: 800, attack: 0.004, when: 0.78 })
+}
+
 // ---------------------------------------------------------------------------
 // 發射音對照表：每種視覺樣式一個專屬發射音（純資料，可測試）
 // ---------------------------------------------------------------------------
@@ -304,5 +322,6 @@ if (typeof window !== 'undefined') {
   ;(window as unknown as { __sfx?: object }).__sfx = {
     audioState, unlockAudio, playLaunch,
     sfxZap, sfxWhoosh, sfxSlash, sfxImpact, sfxSuperEffective, sfxKo, sfxFanfare, sfxUiTick,
+    sfxMeterReady, sfxGimmickCharge,
   }
 }

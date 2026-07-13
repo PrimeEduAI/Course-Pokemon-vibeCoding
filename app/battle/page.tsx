@@ -9,6 +9,8 @@ import { useStyleMode, type StyleMode } from '@/stores/useStyleMode'
 import { ARENAS, FIELD_LABEL, type ArenaId } from '@/components/three/arenas/types'
 import { cooldownProgress } from '@/lib/battle/cooldown'
 import { bossFor } from '@/lib/battle/bosses'
+import { METER_MAX, resolveGimmick } from '@/lib/battle/gimmicks'
+import { sfxMeterReady } from '@/lib/sfx'
 import { TYPE_COLOR, TYPE_ZH, type TypeName } from '@/lib/battle/species'
 import BattleAudio from '@/components/three/BattleAudio'
 
@@ -217,6 +219,17 @@ function FighterSelect({ arenaId, onBack, onConfirm }: {
   )
 }
 
+/** 招牌能力發動中的剩餘時間環（conic-gradient；MEGA = Infinity 顯示常亮） */
+function GimmickRing({ frac, color }: { frac: number | null; color: string }) {
+  const deg = frac === null ? 360 : Math.max(0, Math.min(1, frac)) * 360
+  return (
+    <span
+      className={styles.gimmickRing}
+      style={{ background: `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.12) 0deg)` }}
+    />
+  )
+}
+
 export default function BattlePage() {
   const playerFighter = useBattle((s) => s.playerFighter)
   const enemyFighter = useBattle((s) => s.enemyFighter)
@@ -235,8 +248,37 @@ export default function BattlePage() {
   const choose = useArena((s) => s.choose)
   const clearArena = useArena((s) => s.clear)
 
+  // 世代招牌能力：計量 / 發動狀態
+  const playerGimmick = useBattle((s) => s.playerGimmick)
+  const enemyGimmick = useBattle((s) => s.enemyGimmick)
+
   // 選角完成才掛載戰鬥（選場 → 選角 → 開打）
   const [fighterReady, setFighterReady] = useState(false)
+
+  // 發動橫幅：「MEGA 進化！」等大字 1.2s
+  const [gimmickBanner, setGimmickBanner] = useState<{ text: string; key: number } | null>(null)
+  useEffect(() => {
+    if (!playerGimmick.activatedAt) return
+    const name = useBattle.getState().playerGimmick.active?.nameZh
+    if (!name) return
+    setGimmickBanner({ text: `${name}！`, key: playerGimmick.activatedAt })
+    const t = setTimeout(() => setGimmickBanner(null), 1300)
+    return () => clearTimeout(t)
+  }, [playerGimmick.activatedAt])
+  useEffect(() => {
+    if (!enemyGimmick.activatedAt) return
+    const name = useBattle.getState().enemyGimmick.active?.nameZh
+    if (!name) return
+    setGimmickBanner({ text: `對手 ${name}！`, key: enemyGimmick.activatedAt })
+    const t = setTimeout(() => setGimmickBanner(null), 1300)
+    return () => clearTimeout(t)
+  }, [enemyGimmick.activatedAt])
+
+  // 計量集滿 sting（只提示玩家側 —— 那顆 R 是玩家的按鈕）
+  const meterReady = playerGimmick.meter >= METER_MAX && !playerGimmick.used
+  useEffect(() => {
+    if (meterReady) sfxMeterReady()
+  }, [meterReady])
 
   // 100ms 節拍：驅動冷卻掃描與受擊紅暈
   const [now, setNow] = useState(0)
@@ -309,6 +351,17 @@ export default function BattlePage() {
   const meleeMove = playerFighter.moves[0]
   const projMove = playerFighter.moves[1]
 
+  // 世代招牌能力（本場戰場世代 × 出戰者）
+  const pGimDef = resolveGimmick(arenaDef.gen, playerFighter.dexId)
+  const pActive = playerGimmick.active
+  const pRemainFrac = pActive
+    ? (Number.isFinite(pActive.durationMs) ? Math.max(0, playerGimmick.endsAt - now) / pActive.durationMs : null)
+    : null
+  const eActive = enemyGimmick.active
+  const eRemainFrac = eActive
+    ? (Number.isFinite(eActive.durationMs) ? Math.max(0, enemyGimmick.endsAt - now) / eActive.durationMs : null)
+    : null
+
   return (
     <div className={styles.wrap}>
       <BattleScene arena={arenaId} fieldType={fieldType} />
@@ -370,9 +423,46 @@ export default function BattlePage() {
           <MoveSlot keyCap="L" name="疾走" progress={cooldownProgress(dashLastAt === -Infinity ? 0 : dashLastAt, DASH_COOLDOWN_MS, now)} />
         </div>
 
+        {/* 世代招牌能力：玩家計量條（滿了按 R） */}
+        <div className={`${styles.gimmickBar} ${meterReady ? styles.gimmickBarReady : ''} ${pActive ? styles.gimmickBarActive : ''}`}>
+          <span className={`${styles.gimmickKey} ${meterReady ? styles.gimmickKeyReady : ''}`}>R</span>
+          <div className={styles.gimmickTrack}>
+            <div
+              className={`${styles.gimmickFill} ${meterReady ? styles.gimmickFillReady : ''}`}
+              style={{ width: `${pActive ? 100 : playerGimmick.meter}%` }}
+            />
+          </div>
+          <span className={styles.gimmickName}>
+            {pActive
+              ? `${pActive.nameZh} 發動中`
+              : playerGimmick.used
+                ? `${pGimDef.nameZh} · 已使用`
+                : meterReady
+                  ? `R 發動 ${pGimDef.nameZh}`
+                  : pGimDef.nameZh}
+          </span>
+          {pActive && <GimmickRing frac={pRemainFrac} color="#ffd75e" />}
+        </div>
+
+        {/* 對手招牌能力計量（BOSS 卡上方） */}
+        <div className={`${styles.gimmickOpp} ${eActive ? styles.gimmickBarActive : ''}`}>
+          <span className={styles.gimmickOppLabel}>
+            {eActive ? `${eActive.nameZh} 發動中` : enemyGimmick.used ? '招牌能力 已使用' : '招牌能力'}
+          </span>
+          <div className={styles.gimmickTrack}>
+            <div className={`${styles.gimmickFill} ${styles.gimmickFillOpp}`} style={{ width: `${eActive ? 100 : enemyGimmick.meter}%` }} />
+          </div>
+          {eActive && <GimmickRing frac={eRemainFrac} color="#ff2d5e" />}
+        </div>
+
+        {/* 發動橫幅：MEGA 進化！/ 極巨化！/ Z 招式！/ 羈絆爆發！ */}
+        {gimmickBanner && (
+          <div key={gimmickBanner.key} className={styles.gimmickBanner}>{gimmickBanner.text}</div>
+        )}
+
         {/* 操作提示 */}
         <div className={styles.hint}>
-          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>J K</span> 技能 · <span className={styles.hintKeys}>L / 空白鍵</span> 疾走 · 鏡頭自動鎖定對手
+          <span className={styles.hintKeys}>WASD</span> 移動 · <span className={styles.hintKeys}>J K</span> 技能 · <span className={styles.hintKeys}>L / 空白鍵</span> 疾走 · <span className={styles.hintKeys}>R</span> 招牌能力（計量滿） · 鏡頭自動鎖定對手
         </div>
 
         {/* 勝負結算 */}

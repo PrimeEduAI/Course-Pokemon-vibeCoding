@@ -10,6 +10,7 @@ import Player from './Player'
 import EnemyFighter from './EnemyFighter'
 import Projectiles from './Projectiles'
 import FXLayer from './FXLayer'
+import GimmickFX from './GimmickFX'
 import DamagePopups from './DamagePopups'
 import SfxDriver from './SfxDriver'
 import Gen8Wyndon from './arenas/Gen8Wyndon'
@@ -47,6 +48,8 @@ const keyMap = [
   { name: 'attack1', keys: ['KeyJ', 'j', 'J'] },
   { name: 'attack2', keys: ['KeyK', 'k', 'K'] },
   { name: 'dash', keys: ['KeyL', 'l', 'L', 'Space', ' '] },
+  // 世代招牌能力（計量滿了才有效）：R 發動 MEGA / 極巨化 / Z 招式 / 羈絆爆發
+  { name: 'gimmick', keys: ['KeyR', 'r', 'R'] },
 ]
 
 interface BattleSceneProps {
@@ -76,9 +79,10 @@ export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
             <EnemyFighter />
           </Physics>
 
-          {/* 戰鬥表現層：彈體 / 打擊特效 / 傷害數字 */}
+          {/* 戰鬥表現層：彈體 / 打擊特效 / 傷害數字 / 世代招牌能力 */}
           <Projectiles />
           <FXLayer />
+          <GimmickFX />
           <DamagePopups />
 
           <EffectComposer>

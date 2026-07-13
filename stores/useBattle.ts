@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { MoveDef } from '@/lib/battle/moves'
+import { METER_MAX, type GimmickDef } from '@/lib/battle/gimmicks'
 import { SPECIES, toFighter, type FighterDef } from '@/lib/battle/species'
 import { canFire } from '@/lib/battle/cooldown'
 import { resetWorld } from './battleWorld'
@@ -21,6 +22,8 @@ export interface ProjectileState {
   owner: 'player' | 'enemy'
   origin: [number, number, number]
   dir: [number, number, number]
+  /** 視覺體型倍率（極巨化中的招式 ×1.8；模擬 / 傷害不受影響） */
+  scale?: number
 }
 
 export interface BurstFx {
@@ -35,6 +38,21 @@ export interface BurstFx {
   /** 特效樣式：burst = MoveVisualId、slash = SlashVariant（未指定走通用外觀） */
   variant?: string
 }
+
+export type GimmickSideId = 'player' | 'enemy'
+
+/** 單邊的世代招牌能力狀態（計量 0–100、一場一次、發動中定義） */
+export interface GimmickSide {
+  meter: number
+  used: boolean
+  active: GimmickDef | null
+  /** performance.now() 毫秒；0 = 尚未發動 */
+  activatedAt: number
+  /** activatedAt + durationMs（MEGA = Infinity） */
+  endsAt: number
+}
+
+const freshGimmick = (): GimmickSide => ({ meter: 0, used: false, active: null, activatedAt: 0, endsAt: 0 })
 
 export const DASH_MS = 250
 export const DASH_COOLDOWN_MS = 1200
@@ -64,6 +82,8 @@ interface BattleState {
   projectiles: ProjectileState[]
   fx: BurstFx[]
   resetNonce: number
+  playerGimmick: GimmickSide
+  enemyGimmick: GimmickSide
 
   /** 選角完成 / 進場：設定雙方出戰者並重開一場乾淨的戰鬥 */
   configure: (player: FighterDef, enemy: FighterDef) => void
@@ -79,6 +99,12 @@ interface BattleState {
   removeProjectile: (id: number) => void
   addFx: (f: Omit<BurstFx, 'id' | 'at'>) => void
   removeFx: (id: number) => void
+  /** 招牌能力計量增益（已發動過的一邊不再累積）；夾在 0–100 */
+  gainMeter: (side: GimmickSideId, amount: number) => void
+  /** 計量滿 100（玩家）/ AI 條件達標時發動；一場一次，發動即清空計量 */
+  tryActivateGimmick: (side: GimmickSideId, def: GimmickDef, now: number) => boolean
+  /** 持續時間到（durationMs 有限）→ 收掉發動狀態 */
+  expireGimmick: (side: GimmickSideId) => void
   /** 再戰：保留目前出戰組合 */
   reset: () => void
 }
@@ -99,7 +125,12 @@ const freshRound = (player: FighterDef, enemy: FighterDef) => ({
   popups: [],
   projectiles: [],
   fx: [],
+  playerGimmick: freshGimmick(),
+  enemyGimmick: freshGimmick(),
 })
+
+const gimmickKey = (side: GimmickSideId): 'playerGimmick' | 'enemyGimmick' =>
+  side === 'player' ? 'playerGimmick' : 'enemyGimmick'
 
 export const useBattle = create<BattleState>((set, get) => ({
   ...freshRound(DEFAULT_PLAYER, DEFAULT_ENEMY),
@@ -155,6 +186,35 @@ export const useBattle = create<BattleState>((set, get) => ({
 
   addFx: (f) => set((s) => ({ fx: [...s.fx.slice(-11), { ...f, id: uid++, at: performance.now() }] })),
   removeFx: (id) => set((s) => ({ fx: s.fx.filter((f) => f.id !== id) })),
+
+  gainMeter: (side, amount) => {
+    const key = gimmickKey(side)
+    const g = get()[key]
+    if (g.used || get().phase !== 'fighting') return
+    const meter = Math.min(METER_MAX, Math.max(0, g.meter + amount))
+    if (meter === g.meter) return
+    set({ [key]: { ...g, meter } } as Partial<BattleState>)
+  },
+
+  tryActivateGimmick: (side, def, now) => {
+    const s = get()
+    if (s.phase !== 'fighting') return false
+    const key = gimmickKey(side)
+    const g = s[key]
+    if (g.used) return false
+    if (side === 'player' && g.meter < METER_MAX) return false
+    set({
+      [key]: { meter: 0, used: true, active: def, activatedAt: now, endsAt: now + def.durationMs },
+    } as Partial<BattleState>)
+    return true
+  },
+
+  expireGimmick: (side) => {
+    const key = gimmickKey(side)
+    const g = get()[key]
+    if (!g.active) return
+    set({ [key]: { ...g, active: null } } as Partial<BattleState>)
+  },
 
   reset: () => {
     resetWorld()

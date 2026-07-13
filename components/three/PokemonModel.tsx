@@ -11,6 +11,9 @@ import { idleBob } from '@/lib/movement'
 import { resolveClipRoles, type ClipRoles } from '@/lib/clipRoles'
 import { battleWorld, type MotionChannel } from '@/stores/battleWorld'
 
+/** 模型型態：regular（預設）/ mega / gmax（世代招牌能力的模型換裝） */
+export type ModelForm = 'regular' | 'mega' | 'gmax'
+
 interface Props {
   dexId: number
   targetHeight?: number
@@ -20,6 +23,8 @@ interface Props {
   bob?: boolean
   /** 骨骼動畫指令頻道（battleWorld.playerMotion / enemyMotion）；無片段的模型走程序式動作 */
   motion?: MotionChannel
+  /** 模型型態：mega / gmax 換載對應 GLB（無動畫片段時自動走程序式動作） */
+  form?: ModelForm
 }
 
 interface FlashMat {
@@ -69,8 +74,11 @@ type OneShotRole = 'attack' | 'rangeattack' | 'damage'
 const ONE_FADE = 0.15
 const LOOP_FADE = 0.22
 
-export default function PokemonModel({ dexId, targetHeight = 1.2, entity, bob = true, motion }: Props) {
-  const { scene, animations } = useGLTF(`/assets/glb/regular/${dexId}.glb`)
+/** form + dexId → GLB 路徑（GimmickFX / 預載共用） */
+export const modelUrl = (dexId: number, form: ModelForm = 'regular') => `/assets/glb/${form}/${dexId}.glb`
+
+export default function PokemonModel({ dexId, targetHeight = 1.2, entity, bob = true, motion, form = 'regular' }: Props) {
+  const { scene, animations } = useGLTF(modelUrl(dexId, form))
   const { model, flashMats } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene)
     const mats: FlashMat[] = []
