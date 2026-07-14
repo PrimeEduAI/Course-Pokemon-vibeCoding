@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>咒語卡牌 — 寶可夢 Vibe Coding</title>
+<style>
+@font-face { font-family: 'PS2P'; src: url('/assets/fonts/PressStart2P-Regular.ttf'); font-display: swap; }
+@font-face { font-family: 'DotG'; src: url('/assets/fonts/DotGothic16-Regular.ttf'); font-display: swap; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'DotG', sans-serif;
+  background: #0a0e1a;
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(255, 222, 0, .06), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(255, 45, 120, .07), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0 7px, rgba(255,255,255,.015) 7px 8px);
+  color: #eee; padding: 24px 16px 60px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1 { font-family: 'PS2P'; font-size: clamp(16px, 3.4vw, 26px); text-align: center; color: #ffde00;
+     text-shadow: 3px 3px 0 #3b4cca; letter-spacing: 2px; margin: 18px 0 6px; }
+.sub { text-align: center; color: #9aa7c7; font-size: 15px; margin-bottom: 26px; }
+h2 { font-family: 'PS2P'; font-size: 13px; color: #7cc4ff; margin: 34px 4px 14px; letter-spacing: 1px; }
+h2::before { content: '▶ '; color: #ff2d78; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.grid.wide { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+.card {
+  background: linear-gradient(160deg, #f5efd8, #e8dcae);
+  border: 4px solid #1b1f30; border-radius: 10px;
+  box-shadow: 0 0 0 3px var(--edge, #ffcb05), 6px 6px 0 rgba(0,0,0,.45);
+  color: #23283e; overflow: hidden; display: flex; flex-direction: column;
+  break-inside: avoid; page-break-inside: avoid;
+}
+.chead { display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; background: var(--edge, #ffcb05); border-bottom: 3px solid #1b1f30; }
+.cname { font-family: 'PS2P'; font-size: 10.5px; color: #1b1f30; }
+.cost { font-size: 13px; letter-spacing: 1px; }
+.art { height: 84px; display: flex; align-items: center; justify-content: center;
+  background: repeating-conic-gradient(#dfe8ff 0 25%, #cfd9f4 0 50%) 0 0/16px 16px; border-bottom: 3px solid #1b1f30; }
+.art img { height: 72px; image-rendering: pixelated; }
+.art .glyph { font-size: 44px; }
+.body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.desc { font-size: 12.5px; color: #5a6078; }
+.prompt { background: #fffdf4; border: 2px dashed #a89968; border-radius: 6px;
+  padding: 9px 10px; font-size: 14.5px; line-height: 1.65; white-space: pre-wrap; flex: 1; }
+.prompt b { background: #ffe9a8; padding: 0 3px; border-radius: 3px; }
+.copy { font-family: 'PS2P'; font-size: 10px; padding: 10px; cursor: pointer;
+  background: #3b4cca; color: #fff; border: 3px solid #1b1f30; border-radius: 6px;
+  box-shadow: 0 3px 0 #1b1f30; transition: transform .06s; }
+.copy:active { transform: translateY(3px); box-shadow: none; }
+.copy.ok { background: #2fae56; }
+.note { text-align: center; color: #667; font-size: 13px; margin-top: 40px; }
+@media print {
+  body { background: #fff; padding: 0; }
+  h1 { color: #222; text-shadow: none; } .sub, .copy, .note { display: none; }
+  h2 { color: #222; page-break-after: avoid; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 8mm; }
+  .card { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>咒語卡牌</h1>
+  <div class="sub">點「複製咒語」→ 貼到 Claude Code → 看魔法發生 ✨（粗體字可以換成你的版本）</div>
+  <div id="app"></div>
+  <div class="note">🖨️ 這一頁用瀏覽器「列印」就是實體卡片 ｜ 遊戲操作：WASD 移動 · Space 跳 · J/K/U 技能 · L 疾走 · R 招牌能力</div>
+</div>
+<script>
+const SECTIONS = [
+{ title: '第一次使用（環境設定）', wide: true, cards: [
+  { name: '開始冒險', cost: '🎒', edge: '#2fae56', art: 'sprite:pikachu', desc: '裝好 Claude Code 之後的第一句話',
+    prompt: `你好！我是要參加寶可夢 Vibe Coding 課程的學生，請幫我把課程遊戲裝好。請一步一步做，每完成一步就用一句簡單的話告訴我進度（我是小學生，請講中文、不要用專業術語）：
+
+1. 檢查我的電腦有沒有 git 和 bun，缺少的話先幫我安裝。
+2. 把課程專案 clone 到桌面：https://github.com/PrimeEduAI/-Course-Pokemon-vibeCoding.git 資料夾取名 pokemon-arena
+3. 進入專案資料夾，執行 bun install 安裝依賴（等待時先跟我介紹一下這個遊戲有什麼好玩的）。
+4. 建立還原點：git add -A && git commit -m base --allow-empty && git tag classroom-base
+5. 啟動遊戲：bun run dev，然後告訴我要打開哪個網址。
+6. 最後幫我確認：打開網址能看到「POKÉMON 3D ARENA」的首頁，就代表成功了！
+
+如果中間任何一步出錯，請用簡單的話告訴我發生什麼事、你打算怎麼修，然後直接修好它。` },
+  { name: '還原咒語', cost: '🧯', edge: '#ff5d3d', art: 'glyph:🔄', desc: '玩壞了不用怕，一句話變回原樣',
+    prompt: `遊戲壞掉了，幫我執行 bash scripts/classroom-reset.sh 還原到原始狀態，然後告訴我可以繼續玩了。` },
+]},
+{ title: '一句話魔法（30 秒見效）', cards: [
+  { name: '跳躍強化', cost: '⭐', edge: '#ffcb05', art: 'sprite:pikachu', desc: '全班第一張，跟老師一起施放',
+    prompt: `對戰時按空白鍵的跳躍，幫我改成現在的<b>三倍</b>高。` },
+  { name: '換我的夥伴', cost: '⭐', edge: '#4fd0a0', art: 'sprite:eevee', desc: '圖鑑編號表在桌上（共 107 隻！）',
+    prompt: `對戰的預設寶可夢名單裡，把伊布換成<b>傑尼龜</b>（圖鑑編號 <b>7</b>）。` },
+  { name: '必殺技冠名', cost: '⭐', edge: '#ffcb05', art: 'glyph:⚡', desc: '招式跟著你姓',
+    prompt: `把皮卡丘的「十萬伏特」改名叫「<b>〔你的名字〕的百萬伏特</b>」，威力改成 <b>120</b>。` },
+  { name: '觀眾狂歡', cost: '⭐', edge: '#ff7a9e', art: 'glyph:🎉', desc: '整座體育場為你瘋狂',
+    prompt: `把宮門體育場的觀眾顏色全部換成<b>彩虹色</b>，而且跳動得更興奮。` },
+  { name: '我的主場', cost: '⭐', edge: '#7cc4ff', art: 'glyph:🏟️', desc: '首頁掛上你的名字',
+    prompt: `首頁的大標題「POKÉMON 3D ARENA」改成「<b>〔你的名字〕聯盟</b>」。` },
+  { name: '換音樂', cost: '⭐', edge: '#b48ef0', art: 'glyph:🎵', desc: 'gen1~gen8 都是冠軍戰名曲',
+    prompt: `對戰 BGM 我想要每一場都放 <b>gen4</b>（神奧冠軍戰）那一首。` },
+  { name: '巨大化狂想', cost: '⭐', edge: '#ff2d78', art: 'sprite:snorlax', desc: 'R 鍵的極巨化再誇張一點',
+    prompt: `按 R 的極巨化，把放大倍率從 2.3 倍改成 <b>5 倍</b>。` },
+  { name: '傷害數字秀', cost: '⭐', edge: '#ffcb05', art: 'glyph:💥', desc: '打擊感全開',
+    prompt: `打中敵人跳出來的傷害數字，改成<b>兩倍大</b>，而且效果拔群的時候用<b>彩虹色</b>。` },
+  { name: '天空變色', cost: '⭐', edge: '#7cc4ff', art: 'glyph:🌅', desc: '石英高原的黃昏交給你',
+    prompt: `石英高原（Gen 1 戰場）的天空，從黃昏改成<b>粉紅色的夢幻天空</b>。` },
+  { name: '秘密客串', cost: '⭐', edge: '#b48ef0', art: 'sprite:gengar', desc: '收藏大廳的展示台',
+    prompt: `收藏大廳的展示台上，把其中一隻換成<b>耿鬼</b>（圖鑑編號 94）。` },
+]},
+{ title: '專案起手式（選一張開工）', wide: true, cards: [
+  { name: 'A・我的專屬戰場', cost: '⭐', edge: '#7cc4ff', art: 'glyph:🏟️', desc: '把一座聯盟球場變成你的主場',
+    prompt: `我要改造 Gen <b>〔幾〕</b>的戰場。第一步：把大螢幕/記分板上的字改成「<b>〔我的名字〕盃冠軍賽</b>」。` },
+  { name: 'B・收藏大廳大改造', cost: '⭐⭐', edge: '#ff5d3d', art: 'glyph:🏛️', desc: '寶可夢中心變成你的主題博物館',
+    prompt: `收藏大廳（/center）我想改成<b>〔太空站/海底神殿/糖果屋…〕</b>風格。先把牆壁和地板換成這個主題的顏色和材質。` },
+  { name: 'C・夢幻隊伍', cost: '⭐⭐', edge: '#4fd0a0', art: 'sprite:lucario', desc: '加新寶可夢＋自創三招',
+    prompt: `出戰名單幫我加一隻<b>〔寶可夢名〕</b>（圖鑑編號<b>〔查表〕</b>），用牠真實的屬性和種族值。` },
+  { name: 'D・皮卡丘打排球', cost: '⭐⭐⭐', edge: '#ffcb05', art: 'sprite:pikachu', desc: '經典小遊戲，一步一步蓋',
+    prompt: `幫我做一個新頁面 /volleyball：皮卡丘打排球。先做第一步就好——一個 2D 場地，中間有網子，一顆球會受重力掉下來、碰到地板會彈起來。皮卡丘用現成的像素圖 /assets/sprites/gen5/pikachu.png。` },
+  { name: 'E・卡片對戰', cost: '⭐⭐⭐', edge: '#b48ef0', art: 'glyph:🃏', desc: '越貴的卡越強！',
+    prompt: `幫我做一個新頁面 /cardgame：回合制卡片對戰。先做第一步——畫面上我和電腦各發 3 張寶可夢卡（卡圖用 https://images.pokemontcg.io 的真卡圖，先隨便選 6 張），點一張卡出牌。` },
+]},
+{ title: '高手加碼句型', cards: [
+  { name: '先看計畫', cost: '🎓', edge: '#3b4cca', art: 'glyph:🗺️', desc: '讓 AI 先說要怎麼做',
+    prompt: `先<b>不要動手</b>，告訴我你打算怎麼做，我確認了再開始。` },
+  { name: '看懂改動', cost: '🎓', edge: '#3b4cca', art: 'glyph:🔍', desc: '當個好導演',
+    prompt: `你剛剛改了哪些檔案？用一句話告訴我每個檔案是做什麼的。` },
+  { name: '平衡討論', cost: '🎓', edge: '#3b4cca', art: 'glyph:⚖️', desc: '跟 AI 一起做遊戲設計',
+    prompt: `這樣會不會讓遊戲不公平？幫我想一個平衡的數字。` },
+]},
+];
+
+const app = document.getElementById('app');
+for (const sec of SECTIONS) {
+  const h = document.createElement('h2'); h.textContent = sec.title; app.appendChild(h);
+  const g = document.createElement('div'); g.className = 'grid' + (sec.wide ? ' wide' : ''); app.appendChild(g);
+  for (const c of sec.cards) {
+    const el = document.createElement('div'); el.className = 'card'; el.style.setProperty('--edge', c.edge);
+    const art = c.art.startsWith('sprite:')
+      ? `<img src="/assets/sprites/gen5/${c.art.slice(7)}.png" alt="" onerror="this.outerHTML='<span class=glyph>✨</span>'">`
+      : `<span class="glyph">${c.art.slice(6)}</span>`;
+    el.innerHTML = `
+      <div class="chead"><span class="cname">${c.name}</span><span class="cost">${c.cost}</span></div>
+      <div class="art">${art}</div>
+      <div class="body">
+        <div class="desc">${c.desc}</div>
+        <div class="prompt">${c.prompt}</div>
+        <button class="copy">複製咒語 📋</button>
+      </div>`;
+    const btn = el.querySelector('.copy');
+    btn.addEventListener('click', async () => {
+      const text = el.querySelector('.prompt').innerText;
+      try { await navigator.clipboard.writeText(text); }
+      catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+      btn.textContent = '已複製！去貼給 Claude ✅'; btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = '複製咒語 📋'; btn.classList.remove('ok'); }, 1800);
+    });
+    g.appendChild(el);
+  }
+}
+</script>
+</body>
+</html>
