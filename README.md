@@ -2,15 +2,16 @@
 
 個人版寶可夢卡片收藏 × 3D 對戰網站：拍實體卡 AI 辨識入庫查價（免 API key，走本機 Claude Code）、寶可夢中心 3D 收藏館、八世代聯盟賽戰場即時動作對戰（跳躍/控制技/世代招牌能力 Mega·Z 招式·極巨化）、點陣/動畫/現代 3D 三種畫風即時切換、真實冠軍戰 BGM。
 
-> ⚠️ **版權聲明**：本 repo 只含程式碼。寶可夢模型、sprites、立繪、叫聲、音樂皆為任天堂/株式会社ポケモン版權物，**不包含在 repo 內**，由安裝腳本從公開來源下載至本機。本專案**僅供個人學習研究使用，請勿公開部署或作商業用途**。
+> ⚠️ **版權聲明**：本 repo 只含程式碼。寶可夢模型、sprites、立繪、叫聲、音樂皆為任天堂/株式会社ポケモン版權物，repo 內建之輕量素材包**僅供課程教學與個人學習研究使用**，請勿公開部署、再散布或作商業用途。
 
 ## 安裝
 
 ```bash
-bun install                     # 依賴
-bash scripts/setup-assets.sh    # 下載素材到 public/assets/（約 1.1GB，不進 git）
-bun run dev                     # http://localhost:3000
+bun install    # 依賴
+bun run dev    # http://localhost:3000 — 素材已內建，clone 即玩！
 ```
+
+repo 內建**輕量素材包**（107 隻精選寶可夢 + 全部戰場/BGM/字體，約 200MB）。想要完整 1025 隻：`bash scripts/setup-assets.sh`（約 1.1GB，會覆蓋 public/assets，git 會顯示大量變更——課程機不建議）。
 
 - **拍卡辨識**：預設使用本機已登入的 Claude Code（免設定）；或在 `.env.local` 填 `ANTHROPIC_API_KEY` 走直連 API（較快）。`POKEMONTCG_API_KEY` 選填（免費申請，額度較高）。
 - **手機掃卡**：`bun run dev` 會顯示 Network 網址，同 Wi-Fi 手機開 `/scan` 即可用相機拍卡。
