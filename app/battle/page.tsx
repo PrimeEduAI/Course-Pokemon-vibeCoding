@@ -9,7 +9,7 @@ import { useStyleMode, type StyleMode } from '@/stores/useStyleMode'
 import { ARENAS, FIELD_LABEL, type ArenaId } from '@/components/three/arenas/types'
 import { cooldownProgress } from '@/lib/battle/cooldown'
 import { bossFor } from '@/lib/battle/bosses'
-import { METER_MAX, resolveGimmick } from '@/lib/battle/gimmicks'
+import { METER_MAX, hasGmaxModel, hasMegaModel, resolveGimmick } from '@/lib/battle/gimmicks'
 import { STATUS_META, type StatusEffect } from '@/lib/battle/status'
 import { sfxMeterReady } from '@/lib/sfx'
 import { TYPE_COLOR, TYPE_ZH, type TypeName } from '@/lib/battle/species'
@@ -74,6 +74,19 @@ function TypeBadges({ types }: { types: TypeName[] }) {
       {types.map((t) => (
         <span key={t} className={styles.typeBadge} style={{ background: TYPE_COLOR[t] }}>{TYPE_ZH[t]}</span>
       ))}
+    </span>
+  )
+}
+
+/** MEGA / G-MAX 真換模徽章：讓學生知道誰能在 Gen6/Gen8 變身 */
+function FormBadges({ dexId }: { dexId: number }) {
+  const mega = hasMegaModel(dexId)
+  const gmax = hasGmaxModel(dexId)
+  if (!mega && !gmax) return null
+  return (
+    <span className={styles.typeRow}>
+      {mega && <span className={styles.typeBadge} style={{ background: '#b76bff' }}>MEGA</span>}
+      {gmax && <span className={styles.typeBadge} style={{ background: '#ff4d6d' }}>G-MAX</span>}
     </span>
   )
 }
@@ -204,6 +217,7 @@ function FighterSelect({ arenaId, onBack, onConfirm }: {
           </span>
           <span className={styles.bossMeta}>
             <TypeBadges types={boss.types} />
+            <FormBadges dexId={boss.dexId} />
             <span className={styles.bossHp}>HP {boss.maxHp}</span>
           </span>
         </div>
@@ -228,6 +242,7 @@ function FighterSelect({ arenaId, onBack, onConfirm }: {
               <span className={styles.fsName}>{e.nameZh}</span>
               <span className={styles.fsEn}>{e.nameEn}</span>
               <TypeBadges types={e.types} />
+              <FormBadges dexId={e.dexId} />
               {e.base ? <StatBars base={e.base} /> : <span className={styles.fsPending}>資料補抓中…</span>}
             </button>
           )

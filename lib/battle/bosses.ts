@@ -8,7 +8,7 @@ export const ARENA_BOSS: Record<ArenaId, number> = {
   gen3: 384,  // 烈空坐
   gen4: 448,  // 路卡利歐
   gen5: 643,  // 雷希拉姆
-  gen6: 658,  // 甲賀忍蛙
+  gen6: 282,  // 沙奈朵（卡露妮王牌 → 半血 MEGA 進化真換模）
   gen7: 791,  // 索爾迦雷歐
   gen8: 888,  // 蒼響
 }
