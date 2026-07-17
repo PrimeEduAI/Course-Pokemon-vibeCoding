@@ -37,7 +37,7 @@ const defaultEntry = (dexId: number): RosterEntry => {
 }
 
 /** 預設出戰名單：皮卡丘 + 伊布 */
-export const DEFAULT_ROSTER_DEX = [25, 133]
+export const DEFAULT_ROSTER_DEX = [25, 133, 448, 94]  // 皮卡丘/伊布 + 路卡利歐/耿鬼（MEGA 展示用）
 
 interface RosterState {
   playerDex: number

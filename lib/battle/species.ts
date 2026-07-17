@@ -65,6 +65,8 @@ export const SPECIES_MOVES = {
   waterShuriken: m({ id: 'waterShuriken', nameZh: '水手裏劍', nameEn: 'Water Shuriken', type: 'water', power: 60, cooldownMs: 2200, kind: 'projectile', speed: 18, range: 25, color: '#5ad0ff', visual: 'shuriken' }),
   ironHead: m({ id: 'ironHead', nameZh: '鐵頭功', nameEn: 'Iron Head', type: 'steel', power: 80, cooldownMs: 2200, kind: 'melee', range: 2.8, color: '#cdd6e8' }),
   psychicBlast: m({ id: 'psychicBlast', nameZh: '精神強念', nameEn: 'Psychic', type: 'psychic', power: 90, cooldownMs: 4500, kind: 'projectile', speed: 12, range: 25, color: '#e08aff', visual: 'aura' }),
+  shadowClaw: m({ id: 'shadowClaw', nameZh: '暗影爪', nameEn: 'Shadow Claw', type: 'ghost', power: 70, cooldownMs: 1800, kind: 'melee', range: 2.6, color: '#9a7bd8' }),
+  shadowBall: m({ id: 'shadowBall', nameZh: '暗影球', nameEn: 'Shadow Ball', type: 'ghost', power: 80, cooldownMs: 3800, kind: 'projectile', speed: 13, range: 25, color: '#7a5fd0', visual: 'aura' }),
   psychoCut: m({ id: 'psychoCut', nameZh: '精神利刃', nameEn: 'Psycho Cut', type: 'psychic', power: 70, cooldownMs: 1800, kind: 'melee', range: 2.6, color: '#ff9ee8' }),
   behemothBlade: m({ id: 'behemothBlade', nameZh: '巨獸斬', nameEn: 'Behemoth Blade', type: 'steel', power: 100, cooldownMs: 2800, kind: 'melee', range: 3.0, color: '#9fd8ff' }),
   moonblast: m({ id: 'moonblast', nameZh: '月亮之力', nameEn: 'Moonblast', type: 'fairy', power: 95, cooldownMs: 4500, kind: 'projectile', speed: 12, range: 25, color: '#ffb3d9', visual: 'moon' }),
@@ -128,6 +130,11 @@ export const SPECIES: Record<number, SpeciesDef> = {
     dexId: 282, nameZh: '沙奈朵', nameEn: 'GARDEVOIR', types: ['psychic', 'fairy'],
     base: { hp: 68, atk: 65, def: 65, spa: 125, spd: 115, spe: 80 },
     moves: [sm.psychoCut, sm.moonblast, sm.hypnosis], targetHeight: 2.1,
+  },
+  94: {
+    dexId: 94, nameZh: '耿鬼', nameEn: 'GENGAR', types: ['ghost', 'poison'],
+    base: { hp: 60, atk: 65, def: 60, spa: 130, spd: 75, spe: 110 },
+    moves: [sm.shadowClaw, sm.shadowBall, sm.hypnosis], targetHeight: 1.9,
   },
   791: {
     dexId: 791, nameZh: '索爾迦雷歐', nameEn: 'SOLGALEO', types: ['psychic', 'steel'],

@@ -7,7 +7,7 @@ import { ARENA_IDS } from '@/stores/useArena'
 
 describe('species 資料', () => {
   test('名單完整：預設 25/133 + 八大 BOSS', () => {
-    for (const dex of [25, 133, 6, 249, 384, 448, 643, 658, 282, 791, 888]) {
+    for (const dex of [25, 133, 6, 249, 384, 448, 643, 658, 282, 94, 791, 888]) {
       expect(getSpecies(dex)).not.toBeNull()
     }
     expect(getSpecies(151)).toBeNull()
