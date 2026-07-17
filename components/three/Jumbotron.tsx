@@ -1,8 +1,9 @@
 'use client'
 import { useMemo } from 'react'
 import { CanvasTexture, SRGBColorSpace } from 'three'
+import { useBattle } from '@/stores/useBattle'
 
-function makeScreenTexture(): CanvasTexture {
+function makeScreenTexture(playerName: string, enemyName: string): CanvasTexture {
   const W = 1024
   const H = 512
   const c = document.createElement('canvas')
@@ -40,9 +41,9 @@ function makeScreenTexture(): CanvasTexture {
   g.fillStyle = '#f2f2f2'
   g.font = '800 54px Arial, sans-serif'
   g.textAlign = 'left'
-  g.fillText('PIKACHU', 76, 330)
+  g.fillText(playerName, 76, 330)
   g.textAlign = 'right'
-  g.fillText('CHARIZARD', W - 76, 330)
+  g.fillText(enemyName, W - 76, 330)
   g.textAlign = 'center'
   g.fillStyle = '#ff2d78'
   g.font = '900 60px Arial, sans-serif'
@@ -70,7 +71,10 @@ function makeScreenTexture(): CanvasTexture {
 }
 
 function Screen({ position, rotationY }: { position: [number, number, number]; rotationY: number }) {
-  const tex = useMemo(() => makeScreenTexture(), [])
+  // 對戰卡跟著實際出戰者走（PvP 顯示對手玩家的寶可夢，不再寫死）
+  const playerName = useBattle((s) => s.playerFighter.nameEn)
+  const enemyName = useBattle((s) => s.enemyFighter.nameEn)
+  const tex = useMemo(() => makeScreenTexture(playerName, enemyName), [playerName, enemyName])
   return (
     <group position={position} rotation={[0.14, rotationY, 0, 'YXZ']}>
       {/* 外框 */}

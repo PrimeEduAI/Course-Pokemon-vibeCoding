@@ -66,13 +66,15 @@ interface BattleSceneProps {
 
 export default function BattleScene({ arena, fieldType, pvp }: BattleSceneProps) {
   const showStats = typeof window !== 'undefined' && window.location.search.includes('stats')
+  // 低效能模式（?lite）：關陰影/後處理、降 dpr —— 弱機或同機雙視窗測 PvP 用
+  const lite = typeof window !== 'undefined' && window.location.search.includes('lite')
   const Scenery = SCENERY[arena]
   const Floor = FLOORS[arena]
   return (
     <KeyboardControls map={keyMap}>
       {/* 合成音效駕駛（KO/號角/解鎖 AudioContext），不進 Canvas */}
       <SfxDriver />
-      <Canvas shadows camera={{ position: [0, 6, 12], fov: 50 }} dpr={[1, 2]}>
+      <Canvas shadows={!lite} camera={{ position: [0, 6, 12], fov: 50 }} dpr={lite ? [1, 1.25] : [1, 2]}>
         {showStats && <Stats />}
         {/* PvP 網路層放 Suspense 外：資產還在載時就要能收對手事件（快照/命中），否則早到的訊息會被丟掉 */}
         {pvp && <PvpDriver />}
@@ -93,11 +95,13 @@ export default function BattleScene({ arena, fieldType, pvp }: BattleSceneProps)
           <GimmickFX />
           <DamagePopups />
 
-          <EffectComposer>
-            <Bloom mipmapBlur intensity={0.65} luminanceThreshold={0.78} luminanceSmoothing={0.2} />
-            <Vignette eskil={false} offset={0.18} darkness={0.72} />
-            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-          </EffectComposer>
+          {!lite && (
+            <EffectComposer>
+              <Bloom mipmapBlur intensity={0.65} luminanceThreshold={0.78} luminanceSmoothing={0.2} />
+              <Vignette eskil={false} offset={0.18} darkness={0.72} />
+              <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+            </EffectComposer>
+          )}
         </Suspense>
       </Canvas>
     </KeyboardControls>

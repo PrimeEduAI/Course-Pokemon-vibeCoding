@@ -20,7 +20,8 @@ import { ARENAS } from './arenas/types'
  * - 收：對手的戰鬥事件 → 重播動畫 / 特效 / 音效；hitA 走守方權威結算（combat.ts）。
  */
 
-const SNAP_INTERVAL_MS = 50
+/** 30Hz 快照（每則 ~120B，區網 ~4KB/s）：對手動作的時間解析度，配 RemoteFighter 90ms 插值延遲 */
+const SNAP_INTERVAL_MS = 33
 const slashDir = new Vector3()
 
 export default function PvpDriver() {
