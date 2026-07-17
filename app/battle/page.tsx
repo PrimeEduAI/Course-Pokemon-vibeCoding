@@ -12,7 +12,8 @@ import { bossFor } from '@/lib/battle/bosses'
 import { METER_MAX, hasGmaxModel, hasMegaModel, resolveGimmick } from '@/lib/battle/gimmicks'
 import { STATUS_META, type StatusEffect } from '@/lib/battle/status'
 import { sfxMeterReady } from '@/lib/sfx'
-import { TYPE_COLOR, TYPE_ZH, type TypeName } from '@/lib/battle/species'
+import { TYPE_COLOR, TYPE_ZH, type FighterDef, type TypeName } from '@/lib/battle/species'
+import { useNetwork, clearNetWorld } from '@/stores/useNetwork'
 import BattleAudio from '@/components/three/BattleAudio'
 
 const BattleScene = dynamic(() => import('@/components/three/BattleScene'), {
@@ -121,12 +122,18 @@ function StyleSwitch() {
   )
 }
 
-/** 選擇聯盟戰場：Gen 1–8 全數開放 */
-function ArenaSelect({ onChoose }: { onChoose: (id: ArenaId) => void }) {
+/** 選擇聯盟戰場：Gen 1–8 全數開放（pvpHosting = 好友對戰房主替雙方選場） */
+function ArenaSelect({ onChoose, onPvp, pvpHosting }: {
+  onChoose: (id: ArenaId) => void
+  onPvp?: () => void
+  pvpHosting?: boolean
+}) {
   return (
     <div className={styles.selectOverlay}>
-      <div className={styles.selectSmall}>POKÉMON LEAGUE · WORLD CIRCUIT</div>
-      <h1 className={styles.selectTitle}>選擇聯盟戰場</h1>
+      <div className={styles.selectSmall}>
+        {pvpHosting ? 'FRIEND BATTLE · HOST PICKS THE ARENA' : 'POKÉMON LEAGUE · WORLD CIRCUIT'}
+      </div>
+      <h1 className={styles.selectTitle}>{pvpHosting ? '你是房主 — 選擇對戰場地' : '選擇聯盟戰場'}</h1>
       <div className={styles.selectGrid}>
         {ARENAS.map((a) =>
           a.playable ? (
@@ -155,6 +162,79 @@ function ArenaSelect({ onChoose }: { onChoose: (id: ArenaId) => void }) {
       <div className={styles.selectHint}>
         <span className={styles.selectHintHot}>八大聯盟戰場 全數開放</span> — 各世代招牌機制等你見識
       </div>
+      {onPvp && (
+        <button className={styles.pvpEntry} onClick={onPvp}>🔗 好友對戰 · 區網連線</button>
+      )}
+    </div>
+  )
+}
+
+/** 好友對戰大廳：建房 / 憑 4 碼房號加入（伺服器 = 跑 `bun run pvp` 的那台電腦） */
+function PvpLobby({ onCancel }: { onCancel: () => void }) {
+  const phase = useNetwork((s) => s.phase)
+  const roomCode = useNetwork((s) => s.roomCode)
+  const error = useNetwork((s) => s.error)
+  const [addr, setAddr] = useState('localhost')
+  const [code, setCode] = useState('')
+
+  // 預設伺服器位址：上次用過的 > 目前頁面的 host（教室裡通常就是老師機 IP）
+  useEffect(() => {
+    const saved = window.localStorage.getItem('pvp-server')
+    setAddr(saved || window.location.hostname)
+  }, [])
+  const remember = () => window.localStorage.setItem('pvp-server', addr.trim())
+
+  if (phase === 'connecting') {
+    return (
+      <div className={styles.selectOverlay}>
+        <div className={styles.selectSmall}>FRIEND BATTLE</div>
+        <h1 className={styles.selectTitle}>好友對戰</h1>
+        <div className={styles.pvpWait}>連線中…</div>
+      </div>
+    )
+  }
+
+  if (phase === 'waiting') {
+    return (
+      <div className={styles.selectOverlay}>
+        <div className={styles.selectSmall}>FRIEND BATTLE · ROOM READY</div>
+        <h1 className={styles.selectTitle}>房間已建立</h1>
+        <div className={styles.roomCode}>{roomCode}</div>
+        <div className={styles.pvpWait}>把房號告訴對手，等待加入…</div>
+        <button className={styles.backBtn} onClick={onCancel}>← 取消</button>
+      </div>
+    )
+  }
+
+  const net = useNetwork.getState()
+  return (
+    <div className={styles.selectOverlay}>
+      <div className={styles.selectSmall}>FRIEND BATTLE · LOCAL NETWORK</div>
+      <h1 className={styles.selectTitle}>好友對戰</h1>
+      <div className={styles.pvpPanel}>
+        <label className={styles.pvpLabel}>對戰伺服器（跑 bun run pvp 的那台電腦）</label>
+        <input
+          className={styles.pvpInput}
+          value={addr}
+          onChange={(e) => setAddr(e.target.value)}
+          placeholder="例如 192.168.1.10"
+          spellCheck={false}
+        />
+        <button className={styles.pvpBtn} onClick={() => { remember(); net.create(addr) }}>建立房間</button>
+        <div className={styles.pvpDivider}>或 加入朋友的房間</div>
+        <input
+          className={styles.pvpInput}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          placeholder="輸入 4 碼房號"
+          inputMode="numeric"
+        />
+        <button className={styles.pvpBtn} onClick={() => { remember(); net.join(addr, code) }} disabled={code.length !== 4}>
+          加入房間
+        </button>
+        {error && <div className={styles.pvpError}>{error}</div>}
+      </div>
+      <button className={styles.backBtn} onClick={onCancel}>← 返回</button>
     </div>
   )
 }
@@ -177,11 +257,13 @@ function StatBars({ base }: { base: { hp: number; atk: number; def: number; spe:
   )
 }
 
-/** 出戰選角：預設（皮卡丘/伊布）∪ 掃卡收藏；含本場 BOSS 預告 */
-function FighterSelect({ arenaId, onBack, onConfirm }: {
+/** 出戰選角：預設（皮卡丘/伊布）∪ 掃卡收藏；含本場 BOSS 預告（PvP 換成對手動態） */
+function FighterSelect({ arenaId, onBack, onConfirm, pvp, peerFighter }: {
   arenaId: ArenaId
   onBack: () => void
   onConfirm: (dexId: number) => void
+  pvp?: boolean
+  peerFighter?: FighterDef | null
 }) {
   const roster = useRoster((s) => s.roster)
   const loading = useRoster((s) => s.loading)
@@ -206,22 +288,49 @@ function FighterSelect({ arenaId, onBack, onConfirm }: {
       <div className={styles.selectSmall}>{arenaDef.bannerEn} · CHOOSE YOUR FIGHTER</div>
       <h1 className={styles.selectTitle}>選擇出戰寶可夢</h1>
 
-      {/* 本場 BOSS 預告 */}
-      <div className={styles.bossStrip}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className={styles.bossArt} src={artworkUrl(boss.dexId)} alt={boss.nameZh} />
-        <div className={styles.bossInfo}>
-          <span className={styles.bossLabel}>本場 BOSS · {arenaDef.nameZh}</span>
-          <span className={styles.bossName}>
-            {boss.nameZh} <span className={styles.bossEn}>{boss.nameEn}</span>
-          </span>
-          <span className={styles.bossMeta}>
-            <TypeBadges types={boss.types} />
-            <FormBadges dexId={boss.dexId} />
-            <span className={styles.bossHp}>HP {boss.maxHp}</span>
-          </span>
+      {/* 本場 BOSS 預告（PvP：換成對手選角動態） */}
+      {pvp ? (
+        <div className={styles.bossStrip}>
+          {peerFighter ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className={styles.bossArt} src={artworkUrl(peerFighter.dexId)} alt={peerFighter.nameZh} />
+              <div className={styles.bossInfo}>
+                <span className={styles.bossLabel}>對手已選擇 · {arenaDef.nameZh}</span>
+                <span className={styles.bossName}>
+                  {peerFighter.nameZh} <span className={styles.bossEn}>{peerFighter.nameEn}</span>
+                </span>
+                <span className={styles.bossMeta}>
+                  <TypeBadges types={peerFighter.types} />
+                  <FormBadges dexId={peerFighter.dexId} />
+                  <span className={styles.bossHp}>HP {peerFighter.maxHp}</span>
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className={styles.bossInfo}>
+              <span className={styles.bossLabel}>好友對戰 · {arenaDef.nameZh}</span>
+              <span className={styles.bossName}>對手選擇中…</span>
+            </div>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className={styles.bossStrip}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className={styles.bossArt} src={artworkUrl(boss.dexId)} alt={boss.nameZh} />
+          <div className={styles.bossInfo}>
+            <span className={styles.bossLabel}>本場 BOSS · {arenaDef.nameZh}</span>
+            <span className={styles.bossName}>
+              {boss.nameZh} <span className={styles.bossEn}>{boss.nameEn}</span>
+            </span>
+            <span className={styles.bossMeta}>
+              <TypeBadges types={boss.types} />
+              <FormBadges dexId={boss.dexId} />
+              <span className={styles.bossHp}>HP {boss.maxHp}</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className={styles.fsGrid}>
         {roster.map((e) => {
@@ -302,6 +411,28 @@ export default function BattlePage() {
   // 選角完成才掛載戰鬥（選場 → 選角 → 開打）
   const [fighterReady, setFighterReady] = useState(false)
 
+  // 好友對戰：連線狀態 + 大廳入口
+  const battleMode = useBattle((s) => s.mode)
+  const netPhase = useNetwork((s) => s.phase)
+  const isHost = useNetwork((s) => s.isHost)
+  const roomCode = useNetwork((s) => s.roomCode)
+  const myFighter = useNetwork((s) => s.myFighter)
+  const peerFighter = useNetwork((s) => s.peerFighter)
+  const peerLeft = useNetwork((s) => s.peerLeft)
+  const pvp = netPhase === 'paired'
+  const [pvpEntry, setPvpEntry] = useState(false)
+
+  // PvP：雙方出戰者到齊 → 同步開打（兩邊各自 configure，結果一致）
+  useEffect(() => {
+    if (pvp && myFighter && peerFighter && arenaId && !fighterReady) {
+      useBattle.getState().configure(myFighter, peerFighter, 'pvp')
+      setFighterReady(true)
+    }
+  }, [pvp, myFighter, peerFighter, arenaId, fighterReady])
+
+  // 離開對戰頁：斷線（房間讓給別人用）
+  useEffect(() => () => { useNetwork.getState().disconnect() }, [])
+
   // 發動橫幅：「MEGA 進化！」等大字 1.2s
   const [gimmickBanner, setGimmickBanner] = useState<{ text: string; key: number } | null>(null)
   useEffect(() => {
@@ -349,8 +480,8 @@ export default function BattlePage() {
         e.preventDefault()
         useStyleMode.getState().cycle()
       }
-      // 空白鍵 = 跳躍：擋掉捲動與焦點按鈕誤觸（例如結算後按空白鍵重按到「再戰」）
-      if (e.code === 'Space' || e.key === ' ') e.preventDefault()
+      // 空白鍵 = 跳躍：擋掉捲動與焦點按鈕誤觸（例如結算後按空白鍵重按到「再戰」）；輸入框內不擋
+      if ((e.code === 'Space' || e.key === ' ') && !(e.target instanceof HTMLInputElement)) e.preventDefault()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -366,30 +497,117 @@ export default function BattlePage() {
     const fighter = useRoster.getState().buildFighter(dexId)
     if (!fighter) return
     useRoster.getState().setPlayerDex(dexId)
+    if (pvp) {
+      // PvP：廣播選角，等對手到齊由 effect 統一開打
+      useNetwork.getState().chooseFighter(fighter)
+      return
+    }
     useBattle.getState().configure(fighter, bossFor(arenaId))
     setFighterReady(true)
+  }
+
+  // PvP：房主選場 → 廣播給客隊（gen1–3 的隨機場地型別以房主抽到的為準）
+  const choosePvpArena = (id: ArenaId) => {
+    setFighterReady(false)
+    choose(id)
+    useNetwork.getState().sendConfig(id, useArena.getState().fieldType)
+  }
+
+  // 離開好友對戰：斷線 + 回到單人選場
+  const exitPvp = () => {
+    useNetwork.getState().disconnect()
+    setPvpEntry(false)
+    setFighterReady(false)
+    clearArena()
+  }
+
+  // 再戰：PvP 同步通知對手一起重開
+  const rematch = () => {
+    if (useBattle.getState().mode === 'pvp') {
+      clearNetWorld()
+      useNetwork.getState().sendGame({ g: 'rematch' })
+    }
+    reset()
   }
 
   const pRatio = playerHp / playerMaxHp
   const eRatio = enemyHp / enemyMaxHp
   const hitFlash = now - lastPlayerHitAt < 450
 
+  // 對手離線 / 連線中斷（PvP 各階段共用覆蓋層）
+  const peerLeftOverlay = peerLeft ? (
+    <div className={styles.endOverlay}>
+      <div className={styles.endTitleLose}>對手已離線</div>
+      <div className={styles.endActions}>
+        <button className={styles.changeBtn} onClick={exitPvp}>離開對戰</button>
+      </div>
+    </div>
+  ) : null
+
+  // PvP 大廳：入口點擊後、配對完成前（建房 / 加入）
+  if (pvpEntry && !pvp) {
+    return (
+      <div className={styles.wrap}>
+        <PvpLobby onCancel={exitPvp} />
+      </div>
+    )
+  }
+
+  // PvP 配對完成、未選戰場：房主選場、客隊等待 config
+  if (pvp && !arenaId) {
+    return (
+      <div className={styles.wrap}>
+        {isHost ? (
+          <ArenaSelect onChoose={choosePvpArena} pvpHosting />
+        ) : (
+          <div className={styles.selectOverlay}>
+            <div className={styles.selectSmall}>FRIEND BATTLE · ROOM {roomCode}</div>
+            <h1 className={styles.selectTitle}>配對成功！</h1>
+            <div className={styles.pvpWait}>房主選擇戰場中…</div>
+            <button className={styles.backBtn} onClick={exitPvp}>← 離開對戰</button>
+          </div>
+        )}
+        {peerLeftOverlay}
+      </div>
+    )
+  }
+
   // 未選戰場：只顯示選場畫面（Canvas / 戰鬥 / 鳴叫都尚未開始）
   if (!arenaId) {
     return (
       <div className={styles.wrap}>
-        <ArenaSelect onChoose={(id) => { setFighterReady(false); choose(id) }} />
+        <ArenaSelect onChoose={(id) => { setFighterReady(false); choose(id) }} onPvp={() => setPvpEntry(true)} />
         <StyleSwitch />
       </div>
     )
   }
 
-  // 已選戰場、未選出戰寶可夢：選角畫面
+  // 已選戰場、未選出戰寶可夢：選角畫面（PvP：選完等對手）
   if (!fighterReady) {
+    if (pvp && myFighter) {
+      return (
+        <div className={styles.wrap}>
+          <div className={styles.selectOverlay}>
+            <div className={styles.selectSmall}>FRIEND BATTLE · ROOM {roomCode}</div>
+            <h1 className={styles.selectTitle}>{myFighter.nameZh} 準備完成</h1>
+            <div className={styles.pvpWait}>等待對手選擇寶可夢…</div>
+            <button className={styles.backBtn} onClick={exitPvp}>← 離開對戰</button>
+          </div>
+          {peerLeftOverlay}
+        </div>
+      )
+    }
     return (
       <div className={styles.wrap}>
-        <FighterSelect arenaId={arenaId} onBack={backToArenaSelect} onConfirm={confirmFighter} />
+        <FighterSelect
+          arenaId={arenaId}
+          onBack={pvp ? exitPvp : backToArenaSelect}
+          onConfirm={confirmFighter}
+          pvp={pvp}
+          peerFighter={peerFighter}
+        />
         <StyleSwitch />
+        {peerLeftOverlay}
       </div>
     )
   }
@@ -412,7 +630,7 @@ export default function BattlePage() {
 
   return (
     <div className={styles.wrap}>
-      <BattleScene arena={arenaId} fieldType={fieldType} />
+      <BattleScene arena={arenaId} fieldType={fieldType} pvp={battleMode === 'pvp'} />
       <BattleAudio />
       <div className={styles.overlay}>
         {/* 受擊紅暈 */}
@@ -453,7 +671,7 @@ export default function BattlePage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className={styles.chipArt} src={artworkUrl(enemyFighter.dexId)} alt={enemyFighter.nameZh} />
           <div>
-            <div className={styles.chipSub}>CHAMPION · {dexNo(enemyFighter.dexId)}</div>
+            <div className={styles.chipSub}>{battleMode === 'pvp' ? 'RIVAL' : 'CHAMPION'} · {dexNo(enemyFighter.dexId)}</div>
             <div className={styles.chipName}>{enemyFighter.nameZh} {enemyFighter.nameEn}</div>
             <div className={styles.hpRow} style={{ justifyContent: 'flex-end' }}>
               <span className={styles.hpNum}>{enemyHp}/{enemyMaxHp}</span>
@@ -511,18 +729,25 @@ export default function BattlePage() {
           <div key={gimmickBanner.key} className={styles.gimmickBanner}>{gimmickBanner.text}</div>
         )}
 
-        {/* 勝負結算 */}
-        {phase !== 'fighting' && (
+        {/* 勝負結算（PvP：再戰同步對手、離開即斷線） */}
+        {phase !== 'fighting' && !peerLeft && (
           <div className={styles.endOverlay}>
             <div className={phase === 'victory' ? styles.endTitleWin : styles.endTitleLose}>
               {phase === 'victory' ? 'VICTORY 勝利！' : 'DEFEAT'}
             </div>
             <div className={styles.endActions}>
-              <button className={styles.retryBtn} onClick={reset}>再戰一場</button>
-              <button className={styles.changeBtn} onClick={backToArenaSelect}>更換戰場</button>
+              <button className={styles.retryBtn} onClick={rematch}>再戰一場</button>
+              {battleMode === 'pvp' ? (
+                <button className={styles.changeBtn} onClick={exitPvp}>離開對戰</button>
+              ) : (
+                <button className={styles.changeBtn} onClick={backToArenaSelect}>更換戰場</button>
+              )}
             </div>
           </div>
         )}
+
+        {/* PvP：對手離線覆蓋層 */}
+        {battleMode === 'pvp' && peerLeftOverlay}
       </div>
     </div>
   )

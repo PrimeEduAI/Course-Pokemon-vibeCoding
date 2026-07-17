@@ -5,6 +5,7 @@
     "dev": "next dev",
     "build": "next build --turbopack",
     "test": "bun test tests/",
+    "pvp": "bun server/pvp-server.ts",
     "start": "next start"
   },
   "dependencies": {

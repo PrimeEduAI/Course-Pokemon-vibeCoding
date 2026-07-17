@@ -4,13 +4,17 @@ import { computeDamage } from '@/lib/battle/damage'
 import { getTypeMult } from '@/lib/battle/typeChart'
 import { bossDmgScale } from '@/lib/battle/bosses'
 import { meterGain, type GimmickDef } from '@/lib/battle/gimmicks'
-import { STATUS_META, atkMult as statusAtkMult } from '@/lib/battle/status'
+import { STATUS_META, atkMult as statusAtkMult, type StatusKind } from '@/lib/battle/status'
 import { cryOnce, sfxImpact, sfxStatusApply, sfxSuperEffective } from '@/lib/sfx'
 import { useBattle } from '@/stores/useBattle'
+import { useNetwork } from '@/stores/useNetwork'
 import { battleWorld } from '@/stores/battleWorld'
 
 /** AI 傷害手感係數：沿用同一條傷害管線，僅整體縮放讓玩家能承受 4 拳左右 */
 export const ENEMY_DAMAGE_SCALE = 0.45
+
+/** PvP 傷害手感係數：雙方對稱套用（HP 池 ~200 → 一場 6–10 次有效命中） */
+export const PVP_DAMAGE_SCALE = 0.75
 
 /** 近戰垂直容差（雙向共用）：命中規則 = 水平距離 ≤ range 且 |Δy| ≤ 1.6m（+ 玩家側 ±60° 錐角） */
 export const MELEE_Y_TOLERANCE = 1.6
@@ -41,6 +45,12 @@ function applyMoveStatus(move: MoveDef, target: 'player' | 'enemy', hitPos: Vect
 /** 玩家招式命中 BOSS：傷害 + 白閃 + 擊退 + 傷害數字 */
 export function hitEnemy(move: MoveDef, hitPos: Vector3) {
   const st = useBattle.getState()
+  // PvP：傷害權威在守方 —— 只送命中嘗試（守方驗 i-frames 後以 hitC 回報），本地先給白閃回饋
+  if (st.mode === 'pvp') {
+    battleWorld.enemyFlashUntil = performance.now() + 110
+    useNetwork.getState().sendGame({ g: 'hitA', moveId: move.id })
+    return
+  }
   const attacker = st.playerFighter
   const defender = st.enemyFighter
   const mult = getTypeMult(move.type, defender.types)
@@ -100,4 +110,64 @@ export function hitPlayer(move: MoveDef, hitPos: Vector3) {
   battleWorld.playerFlashUntil = performance.now() + 110
   knockDir.copy(battleWorld.playerPos).sub(battleWorld.enemyPos).setY(0).normalize()
   battleWorld.playerKnock.copy(knockDir).multiplyScalar(5)
+}
+
+// ---------------------------------------------------------------------------
+// PvP（好友對戰）：守方權威結算
+// ---------------------------------------------------------------------------
+
+/**
+ * 對手宣告命中我（hitA）→ 守方（我）驗證並結算：
+ * 疾走 i-frames 中直接閃掉（不回報 = 攻方看不到傷害數字，讀作「被閃掉」）；
+ * 否則以對稱傷害公式扣自己的血，並以 hitC 回報攻方顯示數字/計量。
+ */
+export function pvpApplyHitToSelf(moveId: string) {
+  const st = useBattle.getState()
+  if (st.mode !== 'pvp' || st.phase !== 'fighting') return
+  const now = performance.now()
+  if (st.isInvulnerable(now)) return // 疾走無敵幀：完美迴避
+  const attacker = st.enemyFighter
+  const defender = st.playerFighter
+  const move = attacker.moves.find((m) => m.id === moveId) ?? attacker.moves[0]
+  const mult = getTypeMult(move.type, defender.types)
+  const g = applyGimmick(move, attacker, defender, st.enemyGimmick.active, st.playerGimmick.active)
+  const weak = statusAtkMult(st.enemyEffects, now)
+  const dmg = Math.max(1, Math.round(computeDamage(g.move, g.atk, g.def, hasStab(move, attacker), mult) * PVP_DAMAGE_SCALE * weak))
+  st.dealDamageToPlayer(dmg)
+  const hitPos = battleWorld.playerPos
+  applyMoveStatus(move, 'player', hitPos)
+  st.gainMeter('player', meterGain('taken', dmg >= 60))
+  if (mult >= 2) sfxSuperEffective()
+  else sfxImpact(dmg >= 60)
+  const after = useBattle.getState()
+  if (after.playerHp > 0 && after.playerHp / after.playerMaxHp < 0.3) cryOnce(defender.dexId, 'player-low', 0.5)
+  st.addPopup({ text: `${dmg}`, color: '#ff6b5e', pos: [hitPos.x, hitPos.y + 1.0, hitPos.z], big: dmg >= 60 })
+  battleWorld.playerFlashUntil = now + 110
+  knockDir.copy(battleWorld.playerPos).sub(battleWorld.enemyPos).setY(0).normalize()
+  battleWorld.playerKnock.copy(knockDir).multiplyScalar(mult >= 2 ? 6 : 4)
+  useNetwork.getState().sendGame({ g: 'hitC', dmg, mult, statusKind: move.status })
+}
+
+/** 守方結算回報（hitC）→ 攻方視角：傷害數字 / 特效 / 音效 / 計量（HP 以快照為權威，先扣求即時） */
+export function pvpConfirmHitOnEnemy(msg: { dmg: number; mult: number; statusKind?: StatusKind }) {
+  const st = useBattle.getState()
+  if (st.mode !== 'pvp' || st.phase !== 'fighting') return
+  const { dmg, mult } = msg
+  st.dealDamageToEnemy(dmg)
+  const e = battleWorld.enemyPos
+  if (msg.statusKind) {
+    st.applyStatusTo('enemy', msg.statusKind, performance.now())
+    const meta = STATUS_META[msg.statusKind]
+    st.addPopup({ text: `${meta.nameZh}！`, color: meta.color, pos: [e.x, e.y + 1.6, e.z], big: true })
+  }
+  st.gainMeter('player', meterGain('dealt', dmg >= 60))
+  if (mult >= 2) sfxSuperEffective()
+  else sfxImpact(dmg >= 60)
+  st.addPopup({
+    text: mult >= 2 ? `${dmg} ×2!` : mult === 0 ? '無效' : `${dmg}`,
+    color: mult >= 2 ? '#ffe14d' : '#ffffff',
+    pos: [e.x, e.y + 1.1, e.z],
+    big: mult >= 2 || dmg >= 60,
+  })
+  battleWorld.enemyFlashUntil = performance.now() + 110
 }

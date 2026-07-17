@@ -11,6 +11,8 @@ interface ArenaState {
   arenaId: ArenaId | null
   fieldType: FieldType | null
   choose: (id: ArenaId) => void
+  /** PvP 客隊：照單全收房主選的戰場與場地型別（不重新隨機） */
+  applyConfig: (id: ArenaId, fieldType: FieldType | null) => void
   clear: () => void
 }
 
@@ -33,6 +35,10 @@ export const useArena = create<ArenaState>((set) => ({
     // gen1 四場地隨機；gen2 機械換場、gen3 戰中換場也吃 fieldType（各自場地元件消費）
     const usesField = id === 'gen1' || id === 'gen2' || id === 'gen3'
     set({ arenaId: id, fieldType: usesField ? pickFieldType() : null })
+  },
+  applyConfig: (id, fieldType) => {
+    useBattle.getState().reset()
+    set({ arenaId: id, fieldType })
   },
   clear: () => set({ arenaId: null, fieldType: null }),
 }))

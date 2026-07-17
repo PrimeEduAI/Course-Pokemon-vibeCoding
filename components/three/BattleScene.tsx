@@ -8,6 +8,8 @@ import { Suspense } from 'react'
 import ArenaFloor from './ArenaFloor'
 import Player from './Player'
 import EnemyFighter from './EnemyFighter'
+import RemoteFighter from './RemoteFighter'
+import PvpDriver from './PvpDriver'
 import Projectiles from './Projectiles'
 import FXLayer from './FXLayer'
 import GimmickFX from './GimmickFX'
@@ -58,9 +60,11 @@ interface BattleSceneProps {
   arena: ArenaId
   /** gen1 專用：草/岩/水/冰 */
   fieldType?: FieldType | null
+  /** 好友對戰：對手改由網路快照驅動（RemoteFighter + PvpDriver），BOSS AI 不掛載 */
+  pvp?: boolean
 }
 
-export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
+export default function BattleScene({ arena, fieldType, pvp }: BattleSceneProps) {
   const showStats = typeof window !== 'undefined' && window.location.search.includes('stats')
   const Scenery = SCENERY[arena]
   const Floor = FLOORS[arena]
@@ -70,6 +74,8 @@ export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
       <SfxDriver />
       <Canvas shadows camera={{ position: [0, 6, 12], fov: 50 }} dpr={[1, 2]}>
         {showStats && <Stats />}
+        {/* PvP 網路層放 Suspense 外：資產還在載時就要能收對手事件（快照/命中），否則早到的訊息會被丟掉 */}
+        {pvp && <PvpDriver />}
         <Suspense fallback={null}>
           {/* 世代戰場（天空/光照/看台/布景） */}
           <Scenery />
@@ -77,8 +83,8 @@ export default function BattleScene({ arena, fieldType }: BattleSceneProps) {
           <Physics>
             <Floor fieldType={fieldType} />
             <Player />
-            {/* 對手：世代 BOSS AI */}
-            <EnemyFighter />
+            {/* 對手：世代 BOSS AI（單人）/ 網路快照驅動（好友對戰） */}
+            {pvp ? <RemoteFighter /> : <EnemyFighter />}
           </Physics>
 
           {/* 戰鬥表現層：彈體 / 打擊特效 / 傷害數字 / 世代招牌能力 */}

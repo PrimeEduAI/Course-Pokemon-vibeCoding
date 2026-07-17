@@ -259,8 +259,9 @@ function ZMoveFX({ side, activatedAt }: { side: GimmickSideId; activatedAt: numb
           orb.current.visible = false
           const st = useBattle.getState()
           // 必中結算：此刻 zmove 仍在發動中（過期由下方自己收），威力 ×2.6 由 combat 套用
+          // PvP：敵方 Z 招式的演出在本地重播，但傷害由對方的 hitA 事件送達 → 跳過 hitPlayer
           if (side === 'player') hitEnemy(superMove, tmpV.copy(targetPos))
-          else hitPlayer(superMove, tmpV.copy(targetPos))
+          else if (st.mode !== 'pvp') hitPlayer(superMove, tmpV.copy(targetPos))
           st.addFx({ kind: 'burst', pos: [targetPos.x, targetPos.y + 0.3, targetPos.z], color, angle: 0, scale: 2.5, variant: 'aura' })
           useBattle.getState().expireGimmick(side) // 演出結束：收掉發動狀態
         }

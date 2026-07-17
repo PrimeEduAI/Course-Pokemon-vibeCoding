@@ -49,8 +49,9 @@ function Projectile({ p }: { p: ProjectileState }) {
     if (sim.target.distanceTo(sim.pos) <= HIT_RADIUS) {
       // 玩家衝刺 i-frames：敵方彈體直接穿過
       if (!(p.owner === 'enemy' && st.isInvulnerable(now))) {
+        // PvP：敵方彈體是對手快照的視覺複製品，傷害由對方的 hitA 事件送達 → 只做爆點
         if (p.owner === 'player') hitEnemy(move, sim.target)
-        else hitPlayer(move, sim.target)
+        else if (st.mode !== 'pvp') hitPlayer(move, sim.target)
         st.addFx({
           kind: 'burst',
           pos: [sim.pos.x, sim.pos.y, sim.pos.z],

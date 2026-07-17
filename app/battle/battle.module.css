@@ -905,3 +905,127 @@
   margin: 14px auto 0;
   display: inline-block;
 }
+
+/* ---------------------------------------------------------------------------
+   好友對戰（PvP 大廳）
+--------------------------------------------------------------------------- */
+.pvpEntry {
+  margin-top: 18px;
+  font-family: 'DotGothic16', monospace;
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: #9fe8ff;
+  background: rgba(10, 26, 44, 0.85);
+  border: 1px solid rgba(110, 220, 255, 0.45);
+  padding: 12px 38px;
+  cursor: pointer;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+}
+.pvpEntry:hover {
+  color: #ffffff;
+  transform: scale(1.05);
+  box-shadow: 0 0 22px rgba(110, 220, 255, 0.55);
+}
+
+.pvpPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(440px, 92vw);
+  margin: 10px auto 18px;
+  padding: 26px 30px;
+  background: rgba(8, 12, 28, 0.88);
+  border: 1px solid rgba(120, 150, 255, 0.28);
+  clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+}
+
+.pvpLabel {
+  font-family: 'DotGothic16', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: #8ea2ff;
+  text-align: left;
+}
+
+.pvpInput {
+  font-family: 'DotGothic16', monospace;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #ffffff;
+  background: rgba(16, 22, 44, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 10px 14px;
+  outline: none;
+  width: 100%;
+}
+.pvpInput:focus {
+  border-color: rgba(110, 220, 255, 0.7);
+  box-shadow: 0 0 14px rgba(110, 220, 255, 0.25);
+}
+
+.pvpBtn {
+  font-family: 'DotGothic16', monospace;
+  font-size: 17px;
+  letter-spacing: 3px;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(40, 140, 255, 0.85), rgba(20, 80, 200, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 30px;
+  cursor: pointer;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.pvpBtn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 20px rgba(60, 160, 255, 0.6);
+}
+
+.pvpDivider {
+  font-family: 'DotGothic16', monospace;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pvpDivider::before,
+.pvpDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pvpError {
+  font-family: 'DotGothic16', monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #ff7b6e;
+  background: rgba(80, 16, 20, 0.55);
+  border: 1px solid rgba(255, 90, 80, 0.4);
+  padding: 8px 12px;
+}
+
+.roomCode {
+  font-family: 'DotGothic16', monospace;
+  font-size: 72px;
+  letter-spacing: 22px;
+  padding-left: 22px; /* 平衡最後一個字的 letter-spacing */
+  color: #9fe8ff;
+  text-shadow: 0 0 26px rgba(110, 220, 255, 0.75);
+  margin: 8px 0 4px;
+}
+
+.pvpWait {
+  font-family: 'DotGothic16', monospace;
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: #cfd6ef;
+  animation: pvpPulse 1.4s ease-in-out infinite;
+}
+@keyframes pvpPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}

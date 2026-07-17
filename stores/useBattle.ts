@@ -11,6 +11,9 @@ import { battleWorld, resetWorld } from './battleWorld'
 
 export type Phase = 'fighting' | 'victory' | 'defeat'
 
+/** solo = 世代 BOSS AI；pvp = 好友對戰（對手由網路快照驅動，傷害權威在守方） */
+export type BattleMode = 'solo' | 'pvp'
+
 export interface DamagePopup {
   id: number
   text: string
@@ -69,6 +72,7 @@ const DEFAULT_PLAYER = toFighter(SPECIES[25])
 const DEFAULT_ENEMY = toFighter(SPECIES[6])
 
 interface BattleState {
+  mode: BattleMode
   playerFighter: FighterDef
   enemyFighter: FighterDef
   playerHp: number
@@ -93,7 +97,9 @@ interface BattleState {
   enemyEffects: StatusEffect[]
 
   /** 選角完成 / 進場：設定雙方出戰者並重開一場乾淨的戰鬥 */
-  configure: (player: FighterDef, enemy: FighterDef) => void
+  configure: (player: FighterDef, enemy: FighterDef, mode?: BattleMode) => void
+  /** PvP：套用對手快照的權威狀態（HP / 招牌能力計量）；HP 歸零 = 我方勝利 */
+  netSyncEnemy: (hp: number, meter: number, used: boolean) => void
   /** slot 0 = 近戰（J）、1 = 投射（K）、2 = 控制（U）；震懾中一律鎖招 */
   tryFire: (slot: 0 | 1 | 2, now: number) => boolean
   tryDash: (now: number) => boolean
@@ -147,11 +153,26 @@ const gimmickKey = (side: GimmickSideId): 'playerGimmick' | 'enemyGimmick' =>
 
 export const useBattle = create<BattleState>((set, get) => ({
   ...freshRound(DEFAULT_PLAYER, DEFAULT_ENEMY),
+  mode: 'solo',
   resetNonce: 0,
 
-  configure: (player, enemy) => {
+  configure: (player, enemy, mode = 'solo') => {
     resetWorld()
-    set((s) => ({ ...freshRound(player, enemy), resetNonce: s.resetNonce + 1 }))
+    set((s) => ({ ...freshRound(player, enemy), mode, resetNonce: s.resetNonce + 1 }))
+  },
+
+  netSyncEnemy: (hp, meter, used) => {
+    const s = get()
+    if (s.mode !== 'pvp' || s.phase !== 'fighting') return
+    const clamped = Math.max(0, Math.min(hp, s.enemyMaxHp))
+    const g = s.enemyGimmick
+    const gimChanged = g.meter !== meter || (used && !g.used)
+    if (clamped === s.enemyHp && !gimChanged) return
+    set({
+      enemyHp: clamped,
+      ...(clamped <= 0 ? { phase: 'victory' as Phase } : null),
+      ...(gimChanged ? { enemyGimmick: { ...g, meter, used: used || g.used } } : null),
+    })
   },
 
   tryFire: (slot, now) => {
