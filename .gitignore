@@ -3,4 +3,6 @@ node_modules/
 data/
 .env.local
 *.tsbuildinfo
-.claude/
+# .claude 只發佈 skills（worktrees、settings.local 等不進版控）
+.claude/*
+!.claude/skills/
