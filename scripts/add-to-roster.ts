@@ -4,12 +4,13 @@
  * 用法：bun scripts/add-to-roster.ts <圖鑑編號 1-1025> [卡片名稱] [照片路徑]
  * 供 .claude/skills/add-card-to-roster 拍卡辨識流程呼叫，也可手動執行。
  */
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
-import { extname } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, extname } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { createDb } from '../lib/db'
 import { pokemonCache } from '../lib/db/schema'
 import { addCard } from '../lib/collection'
+import { hasGmaxModel, hasMegaModel } from '../lib/battle/gimmicks'
 import { getPokemon, type CachedPokemon } from '../lib/pokeapi'
 import { SPECIES } from '../lib/battle/species'
 import type { TcgCard } from '../lib/tcg'
@@ -26,6 +27,42 @@ if (!existsSync('package.json')) {
 }
 
 const species = SPECIES[dexId]
+
+// ---- 自動補素材：輕量包缺這隻時，先從本地完整備份複製，否則上網抓單檔 ----
+const BACKUP = process.env.POKE_ASSETS_BACKUP ?? '../pokemon-assets-full-backup'
+const RAW_3D = 'https://raw.githubusercontent.com/Pokemon-3D-api/assets/main/models/opt'
+const RAW_ART = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork'
+const RAW_CRY = 'https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest'
+
+interface AssetTarget { rel: string; url: string; label: string }
+const targets: AssetTarget[] = [
+  { rel: `glb/regular/${dexId}.glb`, url: `${RAW_3D}/regular/${dexId}.glb`, label: '3D 模型' },
+  ...(hasMegaModel(dexId) ? [{ rel: `glb/mega/${dexId}.glb`, url: `${RAW_3D}/mega/${dexId}.glb`, label: 'MEGA 模型' }] : []),
+  ...(hasGmaxModel(dexId) ? [{ rel: `glb/gmax/${dexId}.glb`, url: `${RAW_3D}/gmax/${dexId}.glb`, label: 'G-MAX 模型' }] : []),
+  { rel: `artwork/${dexId}.png`, url: `${RAW_ART}/${dexId}.png`, label: '官方繪圖' },
+  { rel: `cries/latest/${dexId}.ogg`, url: `${RAW_CRY}/${dexId}.ogg`, label: '叫聲' },
+]
+
+for (const t of targets) {
+  const local = `public/assets/${t.rel}`
+  if (existsSync(local)) continue
+  mkdirSync(dirname(local), { recursive: true })
+  const backup = `${BACKUP}/${t.rel}`
+  if (existsSync(backup)) {
+    copyFileSync(backup, local)
+    console.log(`📦 ${t.label}：已從本地備份補入`)
+    continue
+  }
+  try {
+    const res = await fetch(t.url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const buf = Buffer.from(await res.arrayBuffer())
+    writeFileSync(local, buf)
+    console.log(`⬇️ ${t.label}：已下載（${(buf.length / 1024 / 1024).toFixed(1)}MB）`)
+  } catch (e) {
+    console.log(`⚠️ ${t.label}：自動補失敗（${String(e).slice(0, 60)}）`)
+  }
+}
 
 // PokeAPI 掛掉時退回手工物種表，離線教室也能加卡
 const info: CachedPokemon | null = await getPokemon(dexId).catch(() =>
@@ -95,7 +132,7 @@ console.log(species
     : '   ⚠️ 能力值抓取失敗（離線？）：這隻目前不可出戰，連上網後重跑本指令即可補齊')
 
 console.log(existsSync(`public/assets/glb/regular/${dexId}.glb`)
-  ? '   3D 模型：✅ 素材包已內建'
-  : '   3D 模型：⚠️ 不在輕量素材包 — 選牠出戰畫面會出錯！先執行 bash scripts/setup-assets.sh 下載完整素材，或改加素材包內建的寶可夢')
+  ? '   3D 模型：✅ 已就緒'
+  : '   3D 模型：⚠️ 自動補失敗（離線且無本地備份）— 選牠出戰畫面會出錯！連上網路後重跑本指令即可補齊')
 
 console.log('   查看方式：對戰頁 →「選擇出戰寶可夢」重新進入即可看到（收藏大廳也會顯示）')
